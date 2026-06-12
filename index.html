@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tablero de Tareas · KS</title>
+<meta name="theme-color" content="#00528F">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Tablero KS">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -130,6 +137,27 @@ main{max-width:1180px;margin:0 auto;padding:28px 20px}
 .check-row .ck-del{border:none;background:none;cursor:pointer;color:#C8D1DA;font-size:13px;padding:3px 5px;border-radius:6px}
 .check-row .ck-del:hover{color:#C01D44;background:#FDEDF1}
 .empty-check{font-size:12.5px;color:var(--ink-soft);padding:4px 2px}
+.task-subs{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
+.sub-pill{
+  font-size:11.5px;font-weight:500;color:var(--ink);
+  background:var(--bg);border:1px solid var(--line);border-radius:7px;
+  padding:3px 9px;white-space:nowrap;max-width:240px;
+  overflow:hidden;text-overflow:ellipsis;
+}
+.sub-pill.more{color:var(--ink-soft);border-style:dashed;cursor:pointer}
+.sub-pill.more:hover{border-color:var(--azul);color:var(--azul)}
+.sub-pill{display:inline-flex;align-items:center;gap:6px}
+.sub-ck{cursor:pointer;color:var(--ink-soft);font-size:12.5px}
+.sub-ck:hover{color:var(--teal);transform:scale(1.15)}
+.sub-tx{cursor:text;overflow:hidden;text-overflow:ellipsis}
+.sub-tx:hover{color:var(--azul)}
+.sub-add{border-style:dashed;color:var(--ink-soft);cursor:pointer;font-weight:600}
+.sub-add:hover{border-color:var(--teal);color:var(--teal)}
+.sub-input{
+  font:inherit;font-size:11.5px;border:1px solid var(--azul);border-radius:7px;
+  padding:3px 8px;width:150px;color:var(--ink);
+}
+.sub-input:focus{outline:none}
 .add-check{display:flex;gap:8px;margin-top:4px}
 .add-check input{
   flex:1;border:1px solid var(--line);border-radius:10px;padding:9px 11px;
@@ -876,6 +904,7 @@ function taskRow(t){
         ${ckTotal?`<span class="attach-dot" style="${ckDone===ckTotal?'color:var(--teal);font-weight:700':''}">☑ ${ckDone}/${ckTotal}</span>`:''}
       </div>
       ${snippet?`<div class="task-snippet">${esc(snippet)}</div>`:''}
+      <div class="task-subs" data-subs></div>
     </div>
     <div class="task-side">
       ${t.fechaEntrega?`<div class="due-badge ${late?'late':''}"><small>Entrega${late?' ⚠':''}</small>${fmtDate(t.fechaEntrega)}</div>`:''}
@@ -886,7 +915,7 @@ function taskRow(t){
   if(t.section==='finalizadas')el.classList.add('done-row');
 
   el.addEventListener('click',e=>{
-    if(e.target.closest('[data-move]')||e.target.closest('[data-done]')||e.target.closest('[data-dup]')||e.target.closest('[data-tagchip]')||e.target.closest('[data-stripe]')||e.target.classList.contains('tag-input'))return;
+    if(e.target.closest('[data-move]')||e.target.closest('[data-done]')||e.target.closest('[data-dup]')||e.target.closest('[data-tagchip]')||e.target.closest('[data-stripe]')||e.target.closest('[data-subs]')||e.target.classList.contains('tag-input'))return;
     openModal(t.id);
   });
   // Click en la franja: cicla la urgencia sin abrir el detalle
@@ -946,7 +975,108 @@ function taskRow(t){
     input.addEventListener('click',ev=>ev.stopPropagation());
   });
 
+  // Subtareas pendientes en la fila: tildar, editar y agregar sin abrir el detalle
+  buildRowSubs(el.querySelector('[data-subs]'),t);
+
   return el;
+}
+
+const expandedSubs=new Set(); // tareas con la lista de pendientes desplegada
+
+function buildRowSubs(box,t){
+  box.innerHTML='';
+  const pend=(t.checklist||[]).filter(i=>!i.done);
+  const expanded=expandedSubs.has(t.id);
+  const visibles=expanded?pend:pend.slice(0,3);
+
+  visibles.forEach(item=>{
+    const pill=document.createElement('span');
+    pill.className='sub-pill';
+    const ck=document.createElement('span');
+    ck.className='sub-ck';ck.textContent='☐';ck.title='Marcar como hecha';
+    ck.addEventListener('click',async ev=>{
+      ev.stopPropagation();
+      item.done=true;
+      await persist(t);render();
+      toast('Subtarea hecha ✓');
+    });
+    const tx=document.createElement('span');
+    tx.className='sub-tx';tx.textContent=item.text;tx.title='Click para editar';
+    tx.addEventListener('click',ev=>{
+      ev.stopPropagation();
+      const input=document.createElement('input');
+      input.className='sub-input';input.value=item.text;input.maxLength=80;
+      pill.innerHTML='';pill.appendChild(input);
+      input.focus();input.select();
+      let cancelled=false;
+      const commit=async()=>{
+        if(cancelled)return;
+        const v=input.value.trim();
+        if(!v){ // texto vacío = borrar la subtarea
+          t.checklist=t.checklist.filter(x=>x!==item);
+        }else{
+          item.text=v;
+        }
+        await persist(t);render();
+      };
+      input.addEventListener('blur',commit);
+      input.addEventListener('keydown',ev2=>{
+        if(ev2.key==='Enter')input.blur();
+        if(ev2.key==='Escape'){cancelled=true;render();}
+      });
+      input.addEventListener('click',ev2=>ev2.stopPropagation());
+    });
+    pill.appendChild(ck);pill.appendChild(tx);
+    box.appendChild(pill);
+  });
+
+  if(!expanded&&pend.length>3){
+    const more=document.createElement('span');
+    more.className='sub-pill more';more.textContent=`+${pend.length-3} más`;
+    more.title='Ver todas las pendientes';
+    more.addEventListener('click',ev=>{ev.stopPropagation();expandedSubs.add(t.id);render();});
+    box.appendChild(more);
+  }
+  if(expanded&&pend.length>3){
+    const less=document.createElement('span');
+    less.className='sub-pill more';less.textContent='ver menos';
+    less.addEventListener('click',ev=>{ev.stopPropagation();expandedSubs.delete(t.id);render();});
+    box.appendChild(less);
+  }
+
+  // Agregar subtarea directo desde la fila (salvo en finalizadas)
+  if(t.section!=='finalizadas'){
+    const add=document.createElement('span');
+    add.className='sub-pill sub-add';add.textContent='＋ subtarea';
+    add.addEventListener('click',ev=>{
+      ev.stopPropagation();
+      const input=document.createElement('input');
+      input.className='sub-input';input.placeholder='Nueva subtarea…';input.maxLength=80;
+      add.replaceWith(input);
+      input.focus();
+      let cancelled=false;
+      const commit=async()=>{
+        if(cancelled)return;
+        const v=input.value.trim();
+        if(v){
+          t.checklist=t.checklist||[];
+          t.checklist.push({id:uid(),text:v,done:false});
+          await persist(t);
+          toast('Subtarea agregada');
+        }
+        render();
+      };
+      input.addEventListener('blur',commit);
+      input.addEventListener('keydown',ev2=>{
+        if(ev2.key==='Enter')input.blur();
+        if(ev2.key==='Escape'){cancelled=true;render();}
+      });
+      input.addEventListener('click',ev2=>ev2.stopPropagation());
+    });
+    box.appendChild(add);
+  }
+
+  if(!box.childNodes.length)box.remove(); // nada que mostrar: no ocupa espacio
 }
 
 function maxOrder(sec){
@@ -1566,6 +1696,13 @@ async function migrate(){
 }
 
 /* ============ Init ============ */
+/* PWA: registrar el service worker (si el navegador lo soporta) */
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  });
+}
+
 (async()=>{
   initFirebase();
   await openDB();
