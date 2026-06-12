@@ -1188,11 +1188,31 @@ function taskRow(t){
   if(isExpanded(t))el.classList.add('subs-open');
 
   const esZonaInteractiva=e=>e.target.closest('[data-move]')||e.target.closest('[data-done]')||e.target.closest('[data-dup]')||e.target.closest('[data-tagchip]')||e.target.closest('[data-stripe]')||e.target.closest('[data-subs]')||e.target.closest('[data-imp]')||e.target.classList.contains('tag-input');
-  // click simple: despliega/colapsa los ítems de ESTA fila (las demás se colapsan)
+  // Detección propia de click simple vs doble (la nativa se rompe porque
+  // render() reemplaza los nodos y el segundo click cae en un elemento nuevo)
   el.addEventListener('click',e=>{
     if(esZonaInteractiva(e))return;
-    clearTimeout(el._clickT);
-    el._clickT=setTimeout(()=>{
+    if(e.target.classList.contains('tag-input')||e.target.classList.contains('sub-input'))return;
+    const ahora=Date.now();
+    const enTitulo=!!e.target.closest('.task-top');
+    const esDoble=(ahora-(rowClick.t||0)<420)&&rowClick.id===t.id;
+    clearTimeout(rowClick.timer);
+    if(esDoble){
+      rowClick.t=0;rowClick.id=null;
+      if(enTitulo&&rowClick.enTitulo){
+        // doble click en el NOMBRE: modo enfoque, solo esta tarea con sus ítems
+        focusedTask=focusedTask===t.id?null:t.id;
+        expandedSubs.clear();
+        render();
+      }else{
+        // doble click en el resto de la tarjeta: abre el detalle
+        openModal(t.id);
+      }
+      return;
+    }
+    rowClick.t=ahora;rowClick.id=t.id;rowClick.enTitulo=enTitulo;
+    rowClick.timer=setTimeout(()=>{
+      // click simple confirmado: despliega/colapsa los ítems de esta fila
       if(expandedSubs.has(t.id)){
         expandedSubs.delete(t.id);
       }else{
@@ -1200,20 +1220,7 @@ function taskRow(t){
         expandedSubs.add(t.id);
       }
       render();
-    },230);
-  });
-  // doble click en el NOMBRE: modo enfoque (solo se ve esta tarea con sus ítems)
-  // doble click en cualquier otra parte: abre el detalle
-  el.addEventListener('dblclick',e=>{
-    if(e.target.classList.contains('tag-input')||e.target.classList.contains('sub-input'))return;
-    clearTimeout(el._clickT);
-    if(e.target.closest('.task-title')){
-      focusedTask=focusedTask===t.id?null:t.id;
-      expandedSubs.clear();
-      render();
-      return;
-    }
-    openModal(t.id);
+    },430);
   });
   // Click en la franja: cicla la urgencia sin abrir el detalle
   el.querySelector('[data-stripe]').addEventListener('click',async e=>{
@@ -1288,6 +1295,7 @@ function taskRow(t){
 
 const expandedSubs=new Set(); // tareas con la lista de pendientes desplegada
 let focusedTask=null;          // modo enfoque: solo se ve esta tarea
+const rowClick={t:0,id:null,enTitulo:false,timer:null}; // detector de click simple vs doble
 function isExpanded(t){return expandedSubs.has(t.id)||focusedTask===t.id}
 
 function buildRowSubs(box,t){
