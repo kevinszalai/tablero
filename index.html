@@ -83,9 +83,10 @@ header{
 
 main{max-width:1180px;margin:0 auto;padding:28px 20px}
 .columns{
-  display:grid;grid-template-columns:1fr 1fr;gap:26px;align-items:start;
+  display:grid;grid-template-columns:repeat(3,1fr);gap:24px;align-items:start;
 }
-@media(max-width:820px){.columns{grid-template-columns:1fr;gap:0}}
+@media(max-width:1080px){.columns{grid-template-columns:1fr 1fr}}
+@media(max-width:740px){.columns{grid-template-columns:1fr;gap:0}}
 
 .done-row{opacity:.72}
 .done-row .task-title{text-decoration:line-through;text-decoration-color:#B9C3CE;text-decoration-thickness:1.5px}
@@ -158,6 +159,28 @@ main{max-width:1180px;margin:0 auto;padding:28px 20px}
   padding:3px 8px;width:150px;color:var(--ink);
 }
 .sub-input:focus{outline:none}
+
+/* ---------- Importante: fondo amarillo ---------- */
+.task.important{background:#FFF6D9;border-color:#EFD98F}
+.task.important .task-side{border-left-color:#EFD98F}
+.task.important .sub-pill,.task.important .attach-dot{background:#FFFDF3;border-color:#EFD98F}
+.imp-btn.on{color:#D9A400}
+
+/* ---------- Punto de color por área ---------- */
+.adot{display:inline-block;width:9px;height:9px;border-radius:50%;flex-shrink:0}
+
+/* ---------- Paneles (papelera / plantillas) ---------- */
+.panel-title{font-family:'Space Grotesk';font-size:19px;font-weight:700;flex:1}
+.panel-note{font-size:12.5px;color:var(--ink-soft);margin-bottom:16px}
+.panel-row{
+  display:flex;align-items:center;gap:11px;
+  background:var(--bg);border:1px solid var(--line);border-radius:11px;
+  padding:11px 13px;margin-bottom:9px;
+}
+.panel-row .pr-main{flex:1;min-width:0}
+.panel-row .pr-title{font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.panel-row .pr-sub{font-size:11.5px;color:var(--ink-soft);margin-top:2px}
+.panel-row .btn{padding:7px 12px;font-size:12.5px}
 .add-check{display:flex;gap:8px;margin-top:4px}
 .add-check input{
   flex:1;border:1px solid var(--line);border-radius:10px;padding:9px 11px;
@@ -421,6 +444,8 @@ main{max-width:1180px;margin:0 auto;padding:28px 20px}
     <button class="btn btn-ghost" id="btnExport" title="Descargar respaldo JSON">⬇ Respaldo</button>
     <button class="btn btn-ghost" id="btnImport" title="Restaurar desde JSON">⬆ Restaurar</button>
     <button class="btn btn-ghost" id="btnReport" title="Descargar reporte Excel con métricas">📊 Reporte</button>
+    <button class="btn btn-ghost" id="btnTpl" title="Crear desde plantilla">📋 Plantillas</button>
+    <button class="btn btn-ghost" id="btnTrash" title="Tareas eliminadas (recuperables 30 días)">🗑 <span id="trashCount"></span></button>
     <input type="file" id="importFile" accept=".json" hidden>
     <button class="btn btn-primary" id="btnNew">＋ Nueva tarea</button>
   </div>
@@ -444,6 +469,14 @@ main{max-width:1180px;margin:0 auto;padding:28px 20px}
         <span class="count" id="countSeguimiento">0</span>
       </div>
       <div class="task-list" id="list-seguimiento" data-section="seguimiento"></div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2>Eventos y otros</h2>
+        <span class="count" id="countEventos">0</span>
+      </div>
+      <div class="task-list" id="list-eventos" data-section="eventos"></div>
     </section>
   </div>
 
@@ -477,6 +510,15 @@ main{max-width:1180px;margin:0 auto;padding:28px 20px}
            data-placeholder="Escribí el detalle acá. Podés intercalar texto e imágenes: escribís, insertás una imagen donde está el cursor, y seguís escribiendo debajo. También podés pegar capturas directo con Ctrl+V."></div>
       <div class="editor-hint" id="editorHint">Tip: pegá capturas de pantalla con Ctrl+V directo en el texto. Doble click sobre una imagen para verla ampliada.</div>
       <input type="file" id="editorImgInput" accept="image/*" hidden>
+
+      <div class="block-head">
+        Checklist <span class="check-progress" id="checkProgress"></span>
+      </div>
+      <div id="checklist"></div>
+      <div class="add-check" id="addCheckRow">
+        <input type="text" id="newCheckItem" placeholder="Nueva subtarea… (Enter para agregar)">
+        <button class="icon-btn" id="btnAddCheck" title="Agregar subtarea" style="width:38px;height:38px">＋</button>
+      </div>
 
       <div class="field-grid" style="margin-top:20px">
         <div class="field">
@@ -513,18 +555,10 @@ main{max-width:1180px;margin:0 auto;padding:28px 20px}
           <select id="fSection">
             <option value="activas">Activas</option>
             <option value="seguimiento">En seguimiento</option>
+            <option value="eventos">Eventos y otros</option>
             <option value="finalizadas">Finalizadas</option>
           </select>
         </div>
-      </div>
-
-      <div class="block-head">
-        Checklist <span class="check-progress" id="checkProgress"></span>
-      </div>
-      <div id="checklist"></div>
-      <div class="add-check" id="addCheckRow">
-        <input type="text" id="newCheckItem" placeholder="Nueva subtarea… (Enter para agregar)">
-        <button class="icon-btn" id="btnAddCheck" title="Agregar subtarea" style="width:38px;height:38px">＋</button>
       </div>
 
       <div class="block-head">
@@ -536,10 +570,39 @@ main{max-width:1180px;margin:0 auto;padding:28px 20px}
 
       <div class="modal-foot">
         <button class="btn btn-danger" id="btnDelete">Eliminar tarea</button>
+        <button class="btn btn-ghost" id="btnSaveTpl" title="Guarda esta tarea como plantilla reutilizable">📋 Plantilla</button>
         <span class="save-status" id="saveStatus">Guardado ✓</span>
         <div class="spacer"></div>
         <button class="btn btn-primary" id="btnDone">✓ Listo</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Papelera -->
+<div class="overlay" id="trashOverlay">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-inner">
+      <div class="modal-head">
+        <h2 class="panel-title">🗑 Papelera</h2>
+        <button class="close-x" data-close-trash title="Cerrar">✕</button>
+      </div>
+      <p class="panel-note">Las tareas eliminadas se guardan acá por 30 días y después se borran solas.</p>
+      <div id="trashList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Plantillas -->
+<div class="overlay" id="tplOverlay">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-inner">
+      <div class="modal-head">
+        <h2 class="panel-title">📋 Plantillas</h2>
+        <button class="close-x" data-close-tpl title="Cerrar">✕</button>
+      </div>
+      <p class="panel-note">Guardá una tarea como plantilla desde su detalle (botón 📋 Plantilla) y creá pedidos recurrentes desde acá con el checklist ya armado.</p>
+      <div id="tplList"></div>
     </div>
   </div>
 </div>
@@ -787,6 +850,17 @@ const ARCHIVE_DAYS=60;
 /* ============ Filtros rápidos ============ */
 const activeFilters={urg:new Set(),area:new Set(),tag:new Set()};
 
+/* Tareas visibles en el tablero (excluye papelera y plantillas) */
+function alive(){return tasks.filter(t=>!t.deleted&&!t.isTemplate)}
+
+/* Color consistente por área */
+const AREA_COLORS=['#7C4DFF','#00B8A9','#F4A261','#E76F51','#2A9D8F','#9B5DE5','#00BBF9','#F15BB5','#8AC926','#FF6B9D'];
+function areaColor(name){
+  if(!name)return '#C4CDD6';
+  let h=0;for(const c of name.toLowerCase().trim())h=(h*31+c.charCodeAt(0))>>>0;
+  return AREA_COLORS[h%AREA_COLORS.length];
+}
+
 function matchesFilters(t){
   if(activeFilters.urg.size&&!activeFilters.urg.has(t.urgencia||'sin'))return false;
   if(activeFilters.area.size&&!activeFilters.area.has(t.area||''))return false;
@@ -797,7 +871,8 @@ function hasActiveFilters(){return activeFilters.urg.size||activeFilters.area.si
 
 function buildFilters(){
   const bar=$('filterBar');bar.innerHTML='';
-  if(!tasks.length)return;
+  const vivas=alive();
+  if(!vivas.length)return;
   const mkChip=(label,group,value,extra)=>{
     const b=document.createElement('button');
     b.className='chip'+(activeFilters[group].has(value)?' on':'');
@@ -814,10 +889,10 @@ function buildFilters(){
   mkLabel('Urgencia');
   [['Alta','alta'],['Media','media'],['Baja','baja']].forEach(([l,v])=>mkChip(l,'urg',v,true));
 
-  const areas=[...new Set(tasks.map(t=>(t.area||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
-  if(areas.length){mkLabel('Área');areas.forEach(a=>mkChip(esc(a),'area',a));}
+  const areas=[...new Set(vivas.map(t=>(t.area||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  if(areas.length){mkLabel('Área');areas.forEach(a=>mkChip(`<span class="cdot" style="background:${areaColor(a)}"></span>${esc(a)}`,'area',a));}
 
-  const tags=[...new Set(tasks.map(t=>(t.tag||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  const tags=[...new Set(vivas.map(t=>(t.tag||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
   if(tags.length){mkLabel('Tag');tags.forEach(tg=>mkChip(esc(tg),'tag',tg));}
 
   if(hasActiveFilters()){
@@ -833,16 +908,18 @@ function buildFilters(){
 
 function render(){
   const q=$('search').value.trim().toLowerCase();
-  const counts={activas:'countActivas',seguimiento:'countSeguimiento',finalizadas:'countFinalizadas'};
+  const counts={activas:'countActivas',seguimiento:'countSeguimiento',eventos:'countEventos',finalizadas:'countFinalizadas'};
   const empties={
     activas:'Sin tareas activas. Creá una con “＋ Nueva tarea”.',
     seguimiento:'Arrastrá acá.',
+    eventos:'Arrastrá acá.',
     finalizadas:'Arrastrá acá.'
   };
-  ['activas','seguimiento','finalizadas'].forEach(sec=>{
+  const vivas=alive();
+  ['activas','seguimiento','eventos','finalizadas'].forEach(sec=>{
     const list=$('list-'+sec);
     list.innerHTML='';
-    let items=tasks.filter(t=>t.section===sec).sort((a,b)=>a.order-b.order);
+    let items=vivas.filter(t=>t.section===sec).sort((a,b)=>a.order-b.order);
     $(counts[sec]).textContent=items.length;
     if(q) items=items.filter(t=>
       (t.title+' '+(t.area||'')+' '+(t.solicitante||'')+' '+(t.tag||'')).toLowerCase().includes(q)
@@ -876,6 +953,9 @@ function render(){
     items.forEach(t=>list.appendChild(taskRow(t)));
   });
   buildFilters();
+  const nTrash=tasks.filter(t=>t.deleted).length;
+  $('trashCount').textContent=nTrash||'';
+  $('btnTrash').style.opacity=nTrash?'1':'.55';
 }
 
 function taskRow(t){
@@ -897,9 +977,8 @@ function taskRow(t){
         <span class="tag-chip ${t.tag?'':'empty'}" data-tagchip>${t.tag?esc(t.tag):'+ tag'}</span>
       </div>
       <div class="task-meta">
-        ${t.area?`<span>📁 <b>${esc(t.area)}</b></span>`:''}
+        ${t.area?`<span><span class="adot" style="background:${areaColor(t.area)}"></span> <b>${esc(t.area)}</b></span>`:''}
         ${t.solicitante?`<span>👤 ${esc(t.solicitante)}</span>`:''}
-        ${t.fechaSolicitud?`<span>Solicitada: ${fmtDate(t.fechaSolicitud)}</span>`:''}
         ${(imgs||files)?`<span class="attach-dot">${imgs?imgs+' img':''}${imgs&&files?' · ':''}${files?files+' adj':''}</span>`:''}
         ${ckTotal?`<span class="attach-dot" style="${ckDone===ckTotal?'color:var(--teal);font-weight:700':''}">☑ ${ckDone}/${ckTotal}</span>`:''}
       </div>
@@ -908,14 +987,16 @@ function taskRow(t){
     </div>
     <div class="task-side">
       ${t.fechaEntrega?`<div class="due-badge ${late?'late':''}"><small>Entrega${late?' ⚠':''}</small>${fmtDate(t.fechaEntrega)}</div>`:''}
+      <button class="mini-btn imp-btn${t.importante?' on':''}" data-imp title="${t.importante?'Quitar importante':'Marcar importante'}">${t.importante?'★':'☆'}</button>
       ${t.section!=='finalizadas'?`<button class="mini-btn done-btn" data-done title="Marcar finalizada">✓</button>`:''}
       <button class="mini-btn" data-dup title="Duplicar tarea">⧉</button>
-      <button class="mini-btn" data-move title="${t.section==='activas'?'Mover a En seguimiento':t.section==='seguimiento'?'Volver a Activas':'Reactivar (vuelve a Activas)'}">${t.section==='activas'?'⤵':'⤴'}</button>
+      <button class="mini-btn" data-move title="${t.section==='activas'?'Mover a En seguimiento':t.section==='seguimiento'?'Volver a Activas':t.section==='eventos'?'Volver a Activas':'Reactivar (vuelve a Activas)'}">${t.section==='activas'?'⤵':'⤴'}</button>
     </div>`;
   if(t.section==='finalizadas')el.classList.add('done-row');
+  if(t.importante)el.classList.add('important');
 
   el.addEventListener('click',e=>{
-    if(e.target.closest('[data-move]')||e.target.closest('[data-done]')||e.target.closest('[data-dup]')||e.target.closest('[data-tagchip]')||e.target.closest('[data-stripe]')||e.target.closest('[data-subs]')||e.target.classList.contains('tag-input'))return;
+    if(e.target.closest('[data-move]')||e.target.closest('[data-done]')||e.target.closest('[data-dup]')||e.target.closest('[data-tagchip]')||e.target.closest('[data-stripe]')||e.target.closest('[data-subs]')||e.target.closest('[data-imp]')||e.target.classList.contains('tag-input'))return;
     openModal(t.id);
   });
   // Click en la franja: cicla la urgencia sin abrir el detalle
@@ -926,6 +1007,13 @@ function taskRow(t){
     t.urgencia=cycle[(cycle.indexOf(t.urgencia||'sin')+1)%cycle.length];
     await persist(t);render();
     toast(labels[t.urgencia]);
+  });
+  // Importante: toggle con fondo amarillo
+  el.querySelector('[data-imp]').addEventListener('click',async()=>{
+    t.importante=!t.importante;
+    if(!t.importante)delete t.importante;
+    await persist(t);render();
+    toast(t.importante?'Marcada como importante ★':'Importante quitado');
   });
   const doneBtn=el.querySelector('[data-done]');
   if(doneBtn)doneBtn.addEventListener('click',async()=>{
@@ -1080,7 +1168,7 @@ function buildRowSubs(box,t){
 }
 
 function maxOrder(sec){
-  const arr=tasks.filter(x=>x.section===sec);
+  const arr=alive().filter(x=>x.section===sec);
   return arr.length?Math.max(...arr.map(x=>x.order)):0;
 }
 
@@ -1341,6 +1429,7 @@ function setEditMode(on){
   $('btnRedo').style.display=on?'':'none';
   $('btnDone').style.display=on?'':'none';
   $('btnDelete').style.display=(on&&editingId)?'':'none';
+  $('btnSaveTpl').style.display=on?'':'none';
   $('btnEdit').style.display=on?'none':'';
   updateUndoBtn();
   renderFiles();
@@ -1531,10 +1620,139 @@ $('btnDone').addEventListener('click',async()=>{
 
 $('btnDelete').addEventListener('click',async()=>{
   if(!editingId)return;
-  if(!confirm('¿Eliminar esta tarea de forma definitiva?'))return;
-  await removeTask(editingId);
-  tasks=tasks.filter(x=>x.id!==editingId);
-  closeModal();render();toast('Tarea eliminada');
+  const t=tasks.find(x=>x.id===editingId);
+  if(!t)return;
+  t.deleted=Date.now(); // va a la papelera, recuperable 30 días
+  await persist(t);
+  closeModal();render();
+  toast('Movida a la papelera 🗑 (recuperable 30 días)');
+});
+
+/* ============ Papelera ============ */
+const TRASH_DAYS=30;
+function renderTrash(){
+  const box=$('trashList');box.innerHTML='';
+  const items=tasks.filter(t=>t.deleted).sort((a,b)=>b.deleted-a.deleted);
+  if(!items.length){
+    box.innerHTML='<div class="empty-msg">La papelera está vacía.</div>';
+    return;
+  }
+  items.forEach(t=>{
+    const dias=Math.max(0,TRASH_DAYS-Math.floor((Date.now()-t.deleted)/(24*3600*1000)));
+    const row=document.createElement('div');row.className='panel-row';
+    row.innerHTML=`
+      <div class="pr-main">
+        <div class="pr-title">${esc(t.title)||'(sin nombre)'}</div>
+        <div class="pr-sub">Eliminada el ${new Date(t.deleted).toLocaleDateString('es-AR')} · se borra en ${dias} día${dias===1?'':'s'}</div>
+      </div>
+      <button class="btn btn-primary" data-restore>Restaurar</button>
+      <button class="btn btn-danger" data-forever title="Borrar definitivamente">✕</button>`;
+    row.querySelector('[data-restore]').addEventListener('click',async()=>{
+      delete t.deleted;
+      t.order=maxOrder(t.section||'activas')+1;
+      await persist(t);
+      renderTrash();render();
+      toast('Tarea restaurada ✓');
+    });
+    row.querySelector('[data-forever]').addEventListener('click',async()=>{
+      if(!confirm('¿Borrar definitivamente? Esta vez no hay vuelta atrás.'))return;
+      await removeTask(t.id);
+      tasks=tasks.filter(x=>x.id!==t.id);
+      renderTrash();render();
+      toast('Borrada definitivamente');
+    });
+    box.appendChild(row);
+  });
+}
+$('btnTrash').addEventListener('click',()=>{renderTrash();$('trashOverlay').classList.add('open');});
+document.querySelector('[data-close-trash]').addEventListener('click',()=>$('trashOverlay').classList.remove('open'));
+$('trashOverlay').addEventListener('click',e=>{if(e.target===$('trashOverlay'))$('trashOverlay').classList.remove('open');});
+
+/* Purga automática: lo que lleva más de 30 días en la papelera se borra solo */
+async function purgeTrash(){
+  const limite=Date.now()-TRASH_DAYS*24*3600*1000;
+  const viejas=tasks.filter(t=>t.deleted&&t.deleted<limite);
+  for(const t of viejas){
+    await removeTask(t.id);
+  }
+  if(viejas.length)tasks=tasks.filter(t=>!(t.deleted&&t.deleted<limite));
+}
+
+/* ============ Plantillas ============ */
+$('btnSaveTpl').addEventListener('click',async()=>{
+  clearTimeout(saveTimer);
+  await autoSave();
+  if(!editingId){toast('Primero cargá algo en la tarea');return;}
+  const t=tasks.find(x=>x.id===editingId);
+  if(!t)return;
+  const tpl=JSON.parse(JSON.stringify(t));
+  tpl.id=uid();
+  tpl.isTemplate=true;
+  tpl.createdAt=Date.now();
+  delete tpl.deleted;delete tpl.finishedAt;
+  (tpl.checklist||[]).forEach(i=>i.done=false);
+  tasks.push(tpl);
+  await persist(tpl);
+  toast('Guardada como plantilla 📋');
+});
+
+function renderTpls(){
+  const box=$('tplList');box.innerHTML='';
+  const items=tasks.filter(t=>t.isTemplate&&!t.deleted).sort((a,b)=>(a.title||'').localeCompare(b.title||''));
+  if(!items.length){
+    box.innerHTML='<div class="empty-msg">No hay plantillas todavía. Abrí una tarea, entrá en edición y tocá "📋 Plantilla" para guardarla.</div>';
+    return;
+  }
+  items.forEach(tpl=>{
+    const ck=(tpl.checklist||[]).length;
+    const row=document.createElement('div');row.className='panel-row';
+    row.innerHTML=`
+      <div class="pr-main">
+        <div class="pr-title">${esc(tpl.title)||'(sin nombre)'}</div>
+        <div class="pr-sub">${tpl.area?esc(tpl.area)+' · ':''}${ck?ck+' subtarea'+(ck>1?'s':''):'sin checklist'}</div>
+      </div>
+      <button class="btn btn-primary" data-use>Usar</button>
+      <button class="btn btn-danger" data-deltpl title="Borrar plantilla">✕</button>`;
+    row.querySelector('[data-use]').addEventListener('click',async()=>{
+      const c=JSON.parse(JSON.stringify(tpl));
+      c.id=uid();
+      c.createdAt=Date.now();
+      delete c.isTemplate;
+      c.fechaSolicitud=new Date().toISOString().slice(0,10);
+      c.fechaEntrega='';
+      (c.checklist||[]).forEach(i=>{i.done=false;i.id=uid();});
+      c.section='activas';
+      c.order=maxOrder('activas')+1;
+      tasks.push(c);
+      await persist(c);
+      $('tplOverlay').classList.remove('open');
+      render();
+      openModal(c.id);
+      toast('Tarea creada desde plantilla');
+    });
+    row.querySelector('[data-deltpl]').addEventListener('click',async()=>{
+      if(!confirm('¿Borrar esta plantilla?'))return;
+      await removeTask(tpl.id);
+      tasks=tasks.filter(x=>x.id!==tpl.id);
+      renderTpls();
+      toast('Plantilla borrada');
+    });
+    box.appendChild(row);
+  });
+}
+$('btnTpl').addEventListener('click',()=>{renderTpls();$('tplOverlay').classList.add('open');});
+document.querySelector('[data-close-tpl]').addEventListener('click',()=>$('tplOverlay').classList.remove('open'));
+$('tplOverlay').addEventListener('click',e=>{if(e.target===$('tplOverlay'))$('tplOverlay').classList.remove('open');});
+
+/* Doble click en cualquier campo del detalle: pasa a modo edición */
+document.querySelector('#overlay .modal').addEventListener('dblclick',e=>{
+  if(editMode||!editingId)return;
+  if(e.target.closest('.close-x')||e.target.closest('.modal-foot'))return;
+  if(e.target.tagName==='IMG')return; // las imágenes amplían, no editan
+  setEditMode(true);
+  // si tocó un campo puntual, lo deja enfocado para escribir directo
+  const f=e.target.closest('input,select,.rich-editor,.ck-text');
+  if(f&&f.focus)setTimeout(()=>f.focus(),30);
 });
 
 $('btnClose').addEventListener('click',closeModal);
@@ -1542,6 +1760,8 @@ $('overlay').addEventListener('click',e=>{if(e.target===$('overlay'))closeModal(
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){
     if($('imgZoom').classList.contains('open'))$('imgZoom').classList.remove('open');
+    else if($('trashOverlay').classList.contains('open'))$('trashOverlay').classList.remove('open');
+    else if($('tplOverlay').classList.contains('open'))$('tplOverlay').classList.remove('open');
     else if($('overlay').classList.contains('open'))closeModal();
   }
 });
@@ -1552,12 +1772,13 @@ function diasEntre(a,b){return Math.round((b-a)/(24*3600*1000))}
 
 $('btnReport').addEventListener('click',()=>{
   if(typeof XLSX==='undefined'){toast('No cargó la librería de Excel. Revisá la conexión.');return;}
-  if(!tasks.length){toast('No hay tareas para reportar');return;}
+  const data=alive();
+  if(!data.length){toast('No hay tareas para reportar');return;}
   const hoy=new Date();
   const wb=XLSX.utils.book_new();
 
   // --- Hoja 1: Resumen ---
-  const fin=tasks.filter(t=>t.section==='finalizadas');
+  const fin=data.filter(t=>t.section==='finalizadas');
   const conTiempo=fin.filter(t=>t.finishedAt&&t.createdAt);
   const promedio=conTiempo.length
     ?(conTiempo.reduce((acc,t)=>acc+diasEntre(t.createdAt,t.finishedAt),0)/conTiempo.length).toFixed(1)
@@ -1568,11 +1789,12 @@ $('btnReport').addEventListener('click',()=>{
     ['Generado',hoy.toLocaleString('es-AR')],
     [],
     ['Métrica','Valor'],
-    ['Total de tareas',tasks.length],
-    ['Activas',tasks.filter(t=>t.section==='activas').length],
-    ['En seguimiento',tasks.filter(t=>t.section==='seguimiento').length],
+    ['Total de tareas',data.length],
+    ['Activas',data.filter(t=>t.section==='activas').length],
+    ['En seguimiento',data.filter(t=>t.section==='seguimiento').length],
+    ['Eventos y otros',data.filter(t=>t.section==='eventos').length],
     ['Finalizadas',fin.length],
-    ['Vencidas (sin finalizar)',tasks.filter(t=>t.section!=='finalizadas'&&isLate(t)).length],
+    ['Vencidas (sin finalizar)',data.filter(t=>t.section!=='finalizadas'&&isLate(t)).length],
     ['Finalizadas últimos 7 días',fin.filter(t=>t.finishedAt&&t.finishedAt>=d7).length],
     ['Finalizadas últimos 30 días',fin.filter(t=>t.finishedAt&&t.finishedAt>=d30).length],
     ['Tiempo promedio de resolución (días)',promedio],
@@ -1583,7 +1805,7 @@ $('btnReport').addEventListener('click',()=>{
 
   // --- Hoja 2: Por área ---
   const areas={};
-  tasks.forEach(t=>{
+  data.forEach(t=>{
     const a=(t.area||'(sin área)').trim()||'(sin área)';
     areas[a]=areas[a]||{total:0,activas:0,seguimiento:0,finalizadas:0,vencidas:0,dias:[]};
     const g=areas[a];g.total++;
@@ -1623,13 +1845,13 @@ $('btnReport').addEventListener('click',()=>{
   XLSX.utils.book_append_sheet(wb,ws3,'Por semana');
 
   // --- Hoja 4: Detalle de tareas ---
-  const SEC={activas:'Activas',seguimiento:'En seguimiento',finalizadas:'Finalizadas'};
+  const SEC={activas:'Activas',seguimiento:'En seguimiento',eventos:'Eventos y otros',finalizadas:'Finalizadas'};
   const URG={alta:'Alta',media:'Media',baja:'Baja',sin:''};
-  const detalle=[['Título','Sección','Área','Solicitante','Urgencia','Tag','F. solicitud','F. entrega','Vencida','F. finalización','Días resolución','Checklist']];
-  tasks.slice().sort((a,b)=>(a.section>b.section?1:-1)).forEach(t=>{
+  const detalle=[['Título','Sección','Importante','Área','Solicitante','Urgencia','Tag','F. solicitud','F. entrega','Vencida','F. finalización','Días resolución','Checklist']];
+  data.slice().sort((a,b)=>(a.section>b.section?1:-1)).forEach(t=>{
     const ck=(t.checklist||[]);
     detalle.push([
-      t.title||'(sin nombre)',SEC[t.section]||t.section,t.area||'',t.solicitante||'',
+      t.title||'(sin nombre)',SEC[t.section]||t.section,t.importante?'★':'',t.area||'',t.solicitante||'',
       URG[t.urgencia]||'',t.tag||'',
       t.fechaSolicitud?fmtDate(t.fechaSolicitud):'',
       t.fechaEntrega?fmtDate(t.fechaEntrega):'',
@@ -1640,7 +1862,7 @@ $('btnReport').addEventListener('click',()=>{
     ]);
   });
   const ws4=XLSX.utils.aoa_to_sheet(detalle);
-  ws4['!cols']=[{wch:38},{wch:14},{wch:16},{wch:16},{wch:9},{wch:12},{wch:12},{wch:11},{wch:8},{wch:14},{wch:13},{wch:9}];
+  ws4['!cols']=[{wch:38},{wch:15},{wch:5},{wch:16},{wch:16},{wch:9},{wch:12},{wch:12},{wch:11},{wch:8},{wch:14},{wch:13},{wch:9}];
   XLSX.utils.book_append_sheet(wb,ws4,'Tareas');
 
   XLSX.writeFile(wb,'reporte-tablero-'+hoy.toISOString().slice(0,10)+'.xlsx');
@@ -1708,6 +1930,7 @@ if('serviceWorker' in navigator){
   await openDB();
   tasks=await dbAll();
   await migrate();
+  await purgeTrash();
   render();
   initSortable();
   startSync();
