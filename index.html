@@ -83,15 +83,14 @@ header{
 
 main{max-width:1180px;margin:0 auto;padding:28px 20px}
 .columns{
-  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;align-items:stretch;
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;align-items:stretch;
 }
 .columns>.section{min-width:0;display:flex;flex-direction:column;margin-bottom:36px}
 .columns>.section .task-list{flex:1;min-height:180px}
 .columns .empty-msg{
   flex:1;display:flex;align-items:center;justify-content:center;
 }
-@media(max-width:1080px){.columns{grid-template-columns:1fr 1fr}}
-@media(max-width:740px){.columns{grid-template-columns:1fr;gap:0}}
+@media(max-width:740px){.columns{gap:0}}
 
 .done-row{opacity:.72}
 .done-row .task-title{text-decoration:line-through;text-decoration-color:#B9C3CE;text-decoration-thickness:1.5px}
@@ -924,6 +923,15 @@ function diasHasta(fecha){
   const hoy=new Date();hoy.setHours(0,0,0,0);
   return Math.round((new Date(fecha+'T00:00:00')-hoy)/(24*3600*1000));
 }
+function claveAlertaEvento(t){
+  if(t.section!=='eventos')return null;
+  let clave=null;
+  const dEnt=diasHasta(t.fechaEntregas);
+  if(dEnt!==null&&dEnt<=7)clave=dEnt; // entregas cerca o vencida: máxima urgencia
+  const dEv=diasHasta(t.fechaEntrega);
+  if(dEv!==null&&dEv>=0&&dEv<=45)clave=clave===null?dEv:Math.min(clave,dEv);
+  return clave;
+}
 function isLate(t){
   if(!t.fechaEntrega) return false;
   const today=new Date();today.setHours(0,0,0,0);
@@ -984,7 +992,7 @@ let showOldDone=false;
 const ARCHIVE_DAYS=60;
 
 /* ============ Filtros rápidos ============ */
-const activeFilters={urg:new Set(),area:new Set(),tag:new Set(),pais:new Set()};
+const activeFilters={sec:new Set(),urg:new Set(),area:new Set(),tag:new Set(),pais:new Set()};
 
 /* Tareas visibles en el tablero (excluye papelera y plantillas) */
 function alive(){return tasks.filter(t=>!t.deleted&&!t.isTemplate)}
@@ -1019,7 +1027,7 @@ function matchesFilters(t){
   }
   return true;
 }
-function hasActiveFilters(){return activeFilters.urg.size||activeFilters.area.size||activeFilters.tag.size||activeFilters.pais.size}
+function hasActiveFilters(){return activeFilters.sec.size||activeFilters.urg.size||activeFilters.area.size||activeFilters.tag.size||activeFilters.pais.size}
 
 function buildFilters(){
   const bar=$('filterBar');bar.innerHTML='';
@@ -1037,6 +1045,9 @@ function buildFilters(){
     bar.appendChild(b);
   };
   const mkLabel=txt=>{const sp=document.createElement('span');sp.className='fgroup';sp.textContent=txt;bar.appendChild(sp);};
+
+  mkLabel('Sección');
+  [['Activas','activas'],['En seguimiento','seguimiento'],['Eventos y otros','eventos']].forEach(([l,v])=>mkChip(l,'sec',v));
 
   mkLabel('Urgencia');
   [['Alta','alta'],['Media','media'],['Baja','baja']].forEach(([l,v])=>mkChip(l,'urg',v,true));
@@ -1060,7 +1071,7 @@ function buildFilters(){
     const c=document.createElement('button');
     c.className='chip chip-clear';c.textContent='✕ Limpiar filtros';
     c.addEventListener('click',()=>{
-      activeFilters.urg.clear();activeFilters.area.clear();activeFilters.tag.clear();activeFilters.pais.clear();
+      activeFilters.sec.clear();activeFilters.urg.clear();activeFilters.area.clear();activeFilters.tag.clear();activeFilters.pais.clear();
       render();
     });
     bar.appendChild(c);
@@ -1091,11 +1102,23 @@ function render(){
     const list=$('list-'+sec);
     const secEl=list.closest('.section');
     list.innerHTML='';
-    let items=vivas.filter(t=>t.section===sec).sort((a,b)=>a.order-b.order);
+    let items=vivas.filter(t=>t.section===sec).sort((a,b)=>{
+      if(sec==='eventos'){
+        const ka=claveAlertaEvento(a),kb=claveAlertaEvento(b);
+        if(ka!==null&&kb!==null)return ka-kb; // ambos con alerta: el más urgente primero
+        if(ka!==null)return -1;
+        if(kb!==null)return 1;
+      }
+      return a.order-b.order;
+    });
     if(focusedTask){
       items=items.filter(t=>t.id===focusedTask);
       secEl.style.display=items.length?'':'none';
       if(!items.length){$(counts[sec]).textContent=0;return;}
+    }else if(activeFilters.sec.size&&!activeFilters.sec.has(sec)){
+      secEl.style.display='none';
+      $(counts[sec]).textContent=items.length;
+      return;
     }else{
       secEl.style.display='';
     }
