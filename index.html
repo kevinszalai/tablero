@@ -364,6 +364,24 @@ main{max-width:1180px;margin:0 auto;padding:28px 20px}
   text-transform:none;letter-spacing:0;
 }
 .block-head .tool:hover{border-color:var(--azul);color:var(--azul)}
+.editor-toolbar{
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+  background:var(--bg);border:1px solid var(--line);border-bottom:none;
+  border-radius:11px 11px 0 0;padding:7px 10px;
+}
+.fmt-btn{
+  border:1px solid var(--line);background:var(--surface);border-radius:7px;
+  min-width:28px;height:28px;cursor:pointer;font:inherit;font-size:13px;
+  display:inline-flex;align-items:center;justify-content:center;color:var(--ink);
+  transition:all .12s;
+}
+.fmt-btn:hover{border-color:var(--azul);color:var(--azul)}
+.fmt-btn.sw{width:24px;min-width:24px;height:24px;border-radius:6px;border-color:rgba(0,0,0,.12)}
+.fmt-btn.sw:hover{transform:scale(1.15);border-color:var(--ink)}
+.fmt-sep{width:1px;height:18px;background:var(--line);margin:0 3px}
+.fmt-label{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft)}
+.editor-toolbar+.rich-editor{border-radius:0 0 11px 11px}
+
 .rich-editor{
   width:100%;min-height:240px;height:240px;overflow-y:auto;
   resize:vertical;
@@ -510,6 +528,23 @@ main{max-width:1180px;margin:0 auto;padding:28px 20px}
       <div class="block-head" style="margin-top:4px">
         Descripción
         <button class="tool" id="btnInsertImg" type="button">🖼 Insertar imagen</button>
+      </div>
+      <div class="editor-toolbar" id="editorToolbar">
+        <button class="fmt-btn" type="button" data-cmd="bold" title="Negrita (Ctrl+B)"><b>B</b></button>
+        <span class="fmt-sep"></span>
+        <span class="fmt-label">Resaltar</span>
+        <button class="fmt-btn sw" type="button" data-hl="#FFF1A8" style="background:#FFF1A8" title="Resaltado amarillo"></button>
+        <button class="fmt-btn sw" type="button" data-hl="#C9F2D0" style="background:#C9F2D0" title="Resaltado verde"></button>
+        <button class="fmt-btn sw" type="button" data-hl="#CDEFFA" style="background:#CDEFFA" title="Resaltado celeste"></button>
+        <button class="fmt-btn sw" type="button" data-hl="#FFD6E0" style="background:#FFD6E0" title="Resaltado rosa"></button>
+        <span class="fmt-sep"></span>
+        <span class="fmt-label">Color</span>
+        <button class="fmt-btn sw" type="button" data-fc="#C01D44" style="background:#C01D44" title="Texto rojo"></button>
+        <button class="fmt-btn sw" type="button" data-fc="#00528F" style="background:#00528F" title="Texto azul"></button>
+        <button class="fmt-btn sw" type="button" data-fc="#008091" style="background:#008091" title="Texto teal"></button>
+        <button class="fmt-btn sw" type="button" data-fc="#D9A400" style="background:#D9A400" title="Texto dorado"></button>
+        <span class="fmt-sep"></span>
+        <button class="fmt-btn" type="button" data-cmd="removeFormat" title="Quitar todo el formato del texto seleccionado">✕</button>
       </div>
       <div class="rich-editor" id="editor" contenteditable="true"
            data-placeholder="Escribí el detalle acá. Podés intercalar texto e imágenes: escribís, insertás una imagen donde está el cursor, y seguís escribiendo debajo. También podés pegar capturas directo con Ctrl+V."></div>
@@ -822,6 +857,15 @@ function sanitize(html){
         const n=a.name.toLowerCase();
         if(el.tagName==='IMG'&&n==='src'&&/^data:image\//.test(a.value))return;
         if(el.tagName==='A'&&n==='href'&&/^https?:/i.test(a.value))return;
+        if(n==='style'){
+          // del style solo sobreviven color y fondo (negrita/resaltado/color)
+          const c=el.style.color,bg=el.style.backgroundColor,fw=el.style.fontWeight;
+          el.removeAttribute('style');
+          if(c)el.style.color=c;
+          if(bg)el.style.backgroundColor=bg;
+          if(fw==='bold'||parseInt(fw)>=600)el.style.fontWeight='bold';
+          return;
+        }
         el.removeAttribute(a.name);
       });
       if(el.tagName==='A'){el.setAttribute('target','_blank');el.setAttribute('rel','noopener');}
@@ -1254,6 +1298,20 @@ function insertImageAtCaret(dataURL){
   scheduleSave(0);
 }
 
+/* Botones de formato: mousedown prevenido para no perder la selección */
+document.querySelectorAll('#editorToolbar .fmt-btn').forEach(b=>{
+  b.addEventListener('mousedown',e=>e.preventDefault());
+  b.addEventListener('click',()=>{
+    if(!editMode)return;
+    editor().focus();
+    try{document.execCommand('styleWithCSS',false,true);}catch(e){}
+    if(b.dataset.cmd)document.execCommand(b.dataset.cmd,false,null);
+    else if(b.dataset.hl)document.execCommand('hiliteColor',false,b.dataset.hl);
+    else if(b.dataset.fc)document.execCommand('foreColor',false,b.dataset.fc);
+    scheduleSave();
+  });
+});
+
 $('btnInsertImg').addEventListener('click',()=>$('editorImgInput').click());
 $('editorImgInput').addEventListener('change',e=>{
   const f=e.target.files[0];if(!f)return;
@@ -1429,6 +1487,7 @@ function setEditMode(on){
   $('btnInsertImg').style.display=on?'':'none';
   $('btnAddFile').style.display=on?'':'none';
   $('editorHint').style.display=on?'':'none';
+  $('editorToolbar').style.display=on?'':'none';
   $('btnUndo').style.display=on?'':'none';
   $('btnRedo').style.display=on?'':'none';
   $('btnDone').style.display=on?'':'none';
