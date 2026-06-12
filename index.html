@@ -91,6 +91,52 @@ main{max-width:1180px;margin:0 auto;padding:28px 20px}
 }
 .old-toggle:hover{border-color:var(--azul);color:var(--azul)}
 
+/* ---------- Barra de filtros ---------- */
+.filter-bar{
+  max-width:1180px;margin:0 auto;padding:14px 20px 0;
+  display:flex;gap:7px;flex-wrap:wrap;align-items:center;
+}
+.filter-bar:empty{display:none}
+.fgroup{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-soft);margin:0 2px 0 8px}
+.fgroup:first-child{margin-left:0}
+.chip{
+  border:1px solid var(--line);background:var(--surface);border-radius:99px;
+  padding:5px 12px;font:inherit;font-size:12px;font-weight:600;color:var(--ink-soft);
+  cursor:pointer;display:inline-flex;align-items:center;gap:6px;
+  transition:all .12s;
+}
+.chip:hover{border-color:var(--azul);color:var(--azul)}
+.chip.on{background:var(--azul);border-color:var(--azul);color:#fff}
+.chip .cdot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.chip[data-u="alta"] .cdot{background:var(--rosa)}
+.chip[data-u="media"] .cdot{background:var(--amber)}
+.chip[data-u="baja"] .cdot{background:var(--teal)}
+.chip-clear{border-style:dashed;color:#C01D44}
+.chip-clear:hover{border-color:#C01D44;color:#C01D44}
+
+/* ---------- Checklist ---------- */
+.check-progress{font-size:11px;font-weight:700;color:var(--teal);text-transform:none;letter-spacing:0}
+.check-row{
+  display:flex;align-items:center;gap:10px;
+  background:var(--bg);border:1px solid var(--line);border-radius:10px;
+  padding:8px 12px;margin-bottom:7px;
+}
+.check-row input[type="checkbox"]{
+  width:17px;height:17px;accent-color:var(--teal);cursor:pointer;flex-shrink:0;
+}
+.check-row .ck-text{flex:1;font-size:13.5px;border:none;background:transparent;font:inherit;color:var(--ink);padding:2px 0}
+.check-row .ck-text:focus{outline:none;border-bottom:1px solid var(--cyan)}
+.check-row.done .ck-text{text-decoration:line-through;color:var(--ink-soft)}
+.check-row .ck-del{border:none;background:none;cursor:pointer;color:#C8D1DA;font-size:13px;padding:3px 5px;border-radius:6px}
+.check-row .ck-del:hover{color:#C01D44;background:#FDEDF1}
+.empty-check{font-size:12.5px;color:var(--ink-soft);padding:4px 2px}
+.add-check{display:flex;gap:8px;margin-top:4px}
+.add-check input{
+  flex:1;border:1px solid var(--line);border-radius:10px;padding:9px 11px;
+  font:inherit;font-size:13.5px;background:var(--bg);
+}
+.add-check input:focus{outline:none;border-color:var(--azul);background:#fff}
+
 .section{margin-bottom:36px}
 .section-head{display:flex;align-items:baseline;gap:10px;margin-bottom:14px}
 .section-head h2{
@@ -346,10 +392,13 @@ main{max-width:1180px;margin:0 auto;padding:28px 20px}
     <input type="text" class="search" id="search" placeholder="Buscar tarea…">
     <button class="btn btn-ghost" id="btnExport" title="Descargar respaldo JSON">⬇ Respaldo</button>
     <button class="btn btn-ghost" id="btnImport" title="Restaurar desde JSON">⬆ Restaurar</button>
+    <button class="btn btn-ghost" id="btnReport" title="Descargar reporte Excel con métricas">📊 Reporte</button>
     <input type="file" id="importFile" accept=".json" hidden>
     <button class="btn btn-primary" id="btnNew">＋ Nueva tarea</button>
   </div>
 </header>
+
+<div class="filter-bar" id="filterBar"></div>
 
 <main>
   <div class="columns">
@@ -442,6 +491,15 @@ main{max-width:1180px;margin:0 auto;padding:28px 20px}
       </div>
 
       <div class="block-head">
+        Checklist <span class="check-progress" id="checkProgress"></span>
+      </div>
+      <div id="checklist"></div>
+      <div class="add-check" id="addCheckRow">
+        <input type="text" id="newCheckItem" placeholder="Nueva subtarea… (Enter para agregar)">
+        <button class="icon-btn" id="btnAddCheck" title="Agregar subtarea" style="width:38px;height:38px">＋</button>
+      </div>
+
+      <div class="block-head">
         Documentos adjuntos
         <button class="tool" id="btnAddFile" type="button">📎 Adjuntar archivo</button>
       </div>
@@ -462,6 +520,7 @@ main{max-width:1180px;margin:0 auto;padding:28px 20px}
 <div class="toast" id="toast"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
@@ -520,6 +579,7 @@ function dbDel(id){
 let tasks=[];
 let editingId=null;
 let modalFiles=[];
+let modalChecklist=[];
 let modalUrgency='sin';
 
 const $=id=>document.getElementById(id);
@@ -696,6 +756,53 @@ function fileIcon(mime,name){
 let showOldDone=false;
 const ARCHIVE_DAYS=60;
 
+/* ============ Filtros rápidos ============ */
+const activeFilters={urg:new Set(),area:new Set(),tag:new Set()};
+
+function matchesFilters(t){
+  if(activeFilters.urg.size&&!activeFilters.urg.has(t.urgencia||'sin'))return false;
+  if(activeFilters.area.size&&!activeFilters.area.has(t.area||''))return false;
+  if(activeFilters.tag.size&&!activeFilters.tag.has(t.tag||''))return false;
+  return true;
+}
+function hasActiveFilters(){return activeFilters.urg.size||activeFilters.area.size||activeFilters.tag.size}
+
+function buildFilters(){
+  const bar=$('filterBar');bar.innerHTML='';
+  if(!tasks.length)return;
+  const mkChip=(label,group,value,extra)=>{
+    const b=document.createElement('button');
+    b.className='chip'+(activeFilters[group].has(value)?' on':'');
+    if(extra)b.dataset.u=value;
+    b.innerHTML=(extra?'<span class="cdot"></span>':'')+label;
+    b.addEventListener('click',()=>{
+      activeFilters[group].has(value)?activeFilters[group].delete(value):activeFilters[group].add(value);
+      render();
+    });
+    bar.appendChild(b);
+  };
+  const mkLabel=txt=>{const sp=document.createElement('span');sp.className='fgroup';sp.textContent=txt;bar.appendChild(sp);};
+
+  mkLabel('Urgencia');
+  [['Alta','alta'],['Media','media'],['Baja','baja']].forEach(([l,v])=>mkChip(l,'urg',v,true));
+
+  const areas=[...new Set(tasks.map(t=>(t.area||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  if(areas.length){mkLabel('Área');areas.forEach(a=>mkChip(esc(a),'area',a));}
+
+  const tags=[...new Set(tasks.map(t=>(t.tag||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  if(tags.length){mkLabel('Tag');tags.forEach(tg=>mkChip(esc(tg),'tag',tg));}
+
+  if(hasActiveFilters()){
+    const c=document.createElement('button');
+    c.className='chip chip-clear';c.textContent='✕ Limpiar filtros';
+    c.addEventListener('click',()=>{
+      activeFilters.urg.clear();activeFilters.area.clear();activeFilters.tag.clear();
+      render();
+    });
+    bar.appendChild(c);
+  }
+}
+
 function render(){
   const q=$('search').value.trim().toLowerCase();
   const counts={activas:'countActivas',seguimiento:'countSeguimiento',finalizadas:'countFinalizadas'};
@@ -712,8 +819,9 @@ function render(){
     if(q) items=items.filter(t=>
       (t.title+' '+(t.area||'')+' '+(t.solicitante||'')+' '+(t.tag||'')).toLowerCase().includes(q)
     );
+    if(hasActiveFilters())items=items.filter(matchesFilters);
     if(!items.length){
-      list.innerHTML=`<div class="empty-msg">${q?'Sin resultados acá.':empties[sec]}</div>`;
+      list.innerHTML=`<div class="empty-msg">${(q||hasActiveFilters())?'Sin resultados acá.':empties[sec]}</div>`;
       return;
     }
     if(sec==='finalizadas'){
@@ -739,6 +847,7 @@ function render(){
     }
     items.forEach(t=>list.appendChild(taskRow(t)));
   });
+  buildFilters();
 }
 
 function taskRow(t){
@@ -747,6 +856,8 @@ function taskRow(t){
   el.dataset.id=t.id;
   const imgs=countImgs(t.descHtml);
   const files=(t.files||[]).length;
+  const ckTotal=(t.checklist||[]).length;
+  const ckDone=(t.checklist||[]).filter(i=>i.done).length;
   const late=isLate(t);
   const snippet=stripHtml(t.descHtml);
   el.innerHTML=`
@@ -762,6 +873,7 @@ function taskRow(t){
         ${t.solicitante?`<span>👤 ${esc(t.solicitante)}</span>`:''}
         ${t.fechaSolicitud?`<span>Solicitada: ${fmtDate(t.fechaSolicitud)}</span>`:''}
         ${(imgs||files)?`<span class="attach-dot">${imgs?imgs+' img':''}${imgs&&files?' · ':''}${files?files+' adj':''}</span>`:''}
+        ${ckTotal?`<span class="attach-dot" style="${ckDone===ckTotal?'color:var(--teal);font-weight:700':''}">☑ ${ckDone}/${ckTotal}</span>`:''}
       </div>
       ${snippet?`<div class="task-snippet">${esc(snippet)}</div>`:''}
     </div>
@@ -962,6 +1074,57 @@ document.addEventListener('click',e=>{
   }
 });
 
+/* ============ Checklist ============ */
+function renderChecklist(){
+  const box=$('checklist');box.innerHTML='';
+  const done=modalChecklist.filter(i=>i.done).length;
+  $('checkProgress').textContent=modalChecklist.length?`${done}/${modalChecklist.length}`:'';
+  $('addCheckRow').style.display=editMode?'':'none';
+  if(!modalChecklist.length){
+    box.innerHTML=`<div class="empty-check">${editMode?'Sumá subtareas para seguir las etapas del pedido.':'Sin subtareas.'}</div>`;
+    return;
+  }
+  modalChecklist.forEach((it,i)=>{
+    const row=document.createElement('div');
+    row.className='check-row'+(it.done?' done':'');
+    const cb=document.createElement('input');
+    cb.type='checkbox';cb.checked=!!it.done;
+    cb.addEventListener('change',async()=>{
+      it.done=cb.checked;
+      if(editMode){renderChecklist();scheduleSave(0);}
+      else{
+        // En modo lectura también se puede tildar: persiste directo
+        const t=tasks.find(x=>x.id===editingId);
+        if(t){t.checklist=JSON.parse(JSON.stringify(modalChecklist));await persist(t);}
+        renderChecklist();render();
+      }
+    });
+    const txt=document.createElement('input');
+    txt.className='ck-text';txt.value=it.text||'';
+    txt.readOnly=!editMode;txt.placeholder='Subtarea…';
+    if(editMode){
+      txt.addEventListener('input',()=>{it.text=txt.value;scheduleSave();});
+    }
+    row.appendChild(cb);row.appendChild(txt);
+    if(editMode){
+      const del=document.createElement('button');
+      del.className='ck-del';del.title='Quitar';del.textContent='✕';
+      del.addEventListener('click',()=>{modalChecklist.splice(i,1);renderChecklist();scheduleSave(0);});
+      row.appendChild(del);
+    }
+    box.appendChild(row);
+  });
+}
+function addCheckItem(){
+  const v=$('newCheckItem').value.trim();
+  if(!v)return;
+  modalChecklist.push({id:uid(),text:v,done:false});
+  $('newCheckItem').value='';
+  renderChecklist();scheduleSave(0);
+  $('newCheckItem').focus();
+}
+document.addEventListener('DOMContentLoaded',()=>{});
+
 /* ============ Adjuntos ============ */
 const MAX_FILE=10*1024*1024; // 10 MB por archivo
 function renderFiles(){
@@ -991,6 +1154,8 @@ function renderFiles(){
 }
 
 $('btnAddFile').addEventListener('click',()=>$('fileInput').click());
+$('btnAddCheck').addEventListener('click',addCheckItem);
+$('newCheckItem').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addCheckItem();}});
 $('fileInput').addEventListener('change',e=>{
   [...e.target.files].forEach(f=>{
     if(f.size>MAX_FILE){toast(`"${f.name}" supera los 10 MB`);return;}
@@ -1049,6 +1214,7 @@ function setEditMode(on){
   $('btnEdit').style.display=on?'none':'';
   updateUndoBtn();
   renderFiles();
+  renderChecklist();
 }
 $('btnEdit').addEventListener('click',()=>{
   setEditMode(true);
@@ -1065,6 +1231,8 @@ function fillForm(t){
   $('fSection').value=t.section||'activas';
   editor().innerHTML=sanitize(t.descHtml||'');
   modalFiles=JSON.parse(JSON.stringify(t.files||[]));
+  modalChecklist=JSON.parse(JSON.stringify(t.checklist||[]));
+  renderChecklist();
   setUrgency(t.urgencia||'sin');
 }
 
@@ -1074,7 +1242,7 @@ function openModal(id){
   let t;
   if(id){t=tasks.find(x=>x.id===id);}
   else{
-    t={title:'',area:'',solicitante:'',fechaSolicitud:new Date().toISOString().slice(0,10),fechaEntrega:'',urgencia:'sin',tag:'',section:'activas',descHtml:'',files:[]};
+    t={title:'',area:'',solicitante:'',fechaSolicitud:new Date().toISOString().slice(0,10),fechaEntrega:'',urgencia:'sin',tag:'',section:'activas',descHtml:'',files:[],checklist:[]};
   }
   fillForm(t);
   setEditMode(!id); // existente: abre bloqueada en modo lectura; nueva: editable
@@ -1118,7 +1286,7 @@ async function autoSave(){
     prevStr=JSON.stringify(t);
   }else{
     // Tarea nueva: se crea apenas hay algo cargado
-    const hayAlgo=$('fTitle').value.trim()||editor().textContent.trim()||countImgs(editor().innerHTML)||modalFiles.length;
+    const hayAlgo=$('fTitle').value.trim()||editor().textContent.trim()||countImgs(editor().innerHTML)||modalFiles.length||modalChecklist.length;
     if(!hayAlgo)return;
     t={id:uid(),createdAt:Date.now(),section:$('fSection').value};
     t.order=maxOrder(t.section)+1;
@@ -1132,6 +1300,7 @@ async function autoSave(){
     fechaSolicitud:$('fFechaSolicitud').value,fechaEntrega:$('fFechaEntrega').value,
     urgencia:modalUrgency,tag:$('fTag').value.trim(),
     descHtml:sanitize(editor().innerHTML),files:modalFiles,
+    checklist:JSON.parse(JSON.stringify(modalChecklist)),
   });
   if(prevStr!==null&&prevStr===JSON.stringify(t))return; // sin cambios reales
   if(creating){
@@ -1173,7 +1342,7 @@ $('btnUndo').addEventListener('click',async()=>{
       tasks=tasks.filter(x=>x.id!==editingId);
       editingId=null;
     }
-    fillForm({title:'',area:'',solicitante:'',fechaSolicitud:new Date().toISOString().slice(0,10),fechaEntrega:'',urgencia:'sin',tag:'',section:'activas',descHtml:'',files:[]});
+    fillForm({title:'',area:'',solicitante:'',fechaSolicitud:new Date().toISOString().slice(0,10),fechaEntrega:'',urgencia:'sin',tag:'',section:'activas',descHtml:'',files:[],checklist:[]});
     $('btnDelete').style.display='none';
     render();
     toast('Deshecho ↩ tarea descartada');
@@ -1247,6 +1416,106 @@ document.addEventListener('keydown',e=>{
   }
 });
 $('imgZoom').addEventListener('click',()=>$('imgZoom').classList.remove('open'));
+
+/* ============ Reporte Excel ============ */
+function diasEntre(a,b){return Math.round((b-a)/(24*3600*1000))}
+
+$('btnReport').addEventListener('click',()=>{
+  if(typeof XLSX==='undefined'){toast('No cargó la librería de Excel. Revisá la conexión.');return;}
+  if(!tasks.length){toast('No hay tareas para reportar');return;}
+  const hoy=new Date();
+  const wb=XLSX.utils.book_new();
+
+  // --- Hoja 1: Resumen ---
+  const fin=tasks.filter(t=>t.section==='finalizadas');
+  const conTiempo=fin.filter(t=>t.finishedAt&&t.createdAt);
+  const promedio=conTiempo.length
+    ?(conTiempo.reduce((acc,t)=>acc+diasEntre(t.createdAt,t.finishedAt),0)/conTiempo.length).toFixed(1)
+    :'s/d';
+  const d7=Date.now()-7*24*3600*1000, d30=Date.now()-30*24*3600*1000;
+  const resumen=[
+    ['REPORTE DEL TABLERO DE TAREAS'],
+    ['Generado',hoy.toLocaleString('es-AR')],
+    [],
+    ['Métrica','Valor'],
+    ['Total de tareas',tasks.length],
+    ['Activas',tasks.filter(t=>t.section==='activas').length],
+    ['En seguimiento',tasks.filter(t=>t.section==='seguimiento').length],
+    ['Finalizadas',fin.length],
+    ['Vencidas (sin finalizar)',tasks.filter(t=>t.section!=='finalizadas'&&isLate(t)).length],
+    ['Finalizadas últimos 7 días',fin.filter(t=>t.finishedAt&&t.finishedAt>=d7).length],
+    ['Finalizadas últimos 30 días',fin.filter(t=>t.finishedAt&&t.finishedAt>=d30).length],
+    ['Tiempo promedio de resolución (días)',promedio],
+  ];
+  const ws1=XLSX.utils.aoa_to_sheet(resumen);
+  ws1['!cols']=[{wch:36},{wch:22}];
+  XLSX.utils.book_append_sheet(wb,ws1,'Resumen');
+
+  // --- Hoja 2: Por área ---
+  const areas={};
+  tasks.forEach(t=>{
+    const a=(t.area||'(sin área)').trim()||'(sin área)';
+    areas[a]=areas[a]||{total:0,activas:0,seguimiento:0,finalizadas:0,vencidas:0,dias:[]};
+    const g=areas[a];g.total++;
+    if(t.section==='activas')g.activas++;
+    if(t.section==='seguimiento')g.seguimiento++;
+    if(t.section==='finalizadas'){
+      g.finalizadas++;
+      if(t.finishedAt&&t.createdAt)g.dias.push(diasEntre(t.createdAt,t.finishedAt));
+    }else if(isLate(t))g.vencidas++;
+  });
+  const porArea=[['Área','Total','Activas','En seguimiento','Finalizadas','Vencidas','Prom. resolución (días)']];
+  Object.keys(areas).sort((a,b)=>areas[b].total-areas[a].total).forEach(a=>{
+    const g=areas[a];
+    porArea.push([a,g.total,g.activas,g.seguimiento,g.finalizadas,g.vencidas,
+      g.dias.length?(g.dias.reduce((x,y)=>x+y,0)/g.dias.length).toFixed(1):'s/d']);
+  });
+  const ws2=XLSX.utils.aoa_to_sheet(porArea);
+  ws2['!cols']=[{wch:24},{wch:8},{wch:9},{wch:14},{wch:12},{wch:9},{wch:22}];
+  XLSX.utils.book_append_sheet(wb,ws2,'Por área');
+
+  // --- Hoja 3: Finalizadas por semana ---
+  const semanas={};
+  fin.filter(t=>t.finishedAt).forEach(t=>{
+    const d=new Date(t.finishedAt);
+    const lunes=new Date(d);lunes.setDate(d.getDate()-((d.getDay()+6)%7));lunes.setHours(0,0,0,0);
+    const k=lunes.toISOString().slice(0,10);
+    semanas[k]=(semanas[k]||0)+1;
+  });
+  const porSemana=[['Semana (lunes)','Finalizadas']];
+  Object.keys(semanas).sort().forEach(k=>{
+    const [y,m,d]=k.split('-');
+    porSemana.push([`${d}/${m}/${y}`,semanas[k]]);
+  });
+  if(porSemana.length===1)porSemana.push(['(sin datos todavía)','']);
+  const ws3=XLSX.utils.aoa_to_sheet(porSemana);
+  ws3['!cols']=[{wch:18},{wch:12}];
+  XLSX.utils.book_append_sheet(wb,ws3,'Por semana');
+
+  // --- Hoja 4: Detalle de tareas ---
+  const SEC={activas:'Activas',seguimiento:'En seguimiento',finalizadas:'Finalizadas'};
+  const URG={alta:'Alta',media:'Media',baja:'Baja',sin:''};
+  const detalle=[['Título','Sección','Área','Solicitante','Urgencia','Tag','F. solicitud','F. entrega','Vencida','F. finalización','Días resolución','Checklist']];
+  tasks.slice().sort((a,b)=>(a.section>b.section?1:-1)).forEach(t=>{
+    const ck=(t.checklist||[]);
+    detalle.push([
+      t.title||'(sin nombre)',SEC[t.section]||t.section,t.area||'',t.solicitante||'',
+      URG[t.urgencia]||'',t.tag||'',
+      t.fechaSolicitud?fmtDate(t.fechaSolicitud):'',
+      t.fechaEntrega?fmtDate(t.fechaEntrega):'',
+      (t.section!=='finalizadas'&&isLate(t))?'SÍ':'',
+      t.finishedAt?new Date(t.finishedAt).toLocaleDateString('es-AR'):'',
+      (t.finishedAt&&t.createdAt)?diasEntre(t.createdAt,t.finishedAt):'',
+      ck.length?`${ck.filter(i=>i.done).length}/${ck.length}`:'',
+    ]);
+  });
+  const ws4=XLSX.utils.aoa_to_sheet(detalle);
+  ws4['!cols']=[{wch:38},{wch:14},{wch:16},{wch:16},{wch:9},{wch:12},{wch:12},{wch:11},{wch:8},{wch:14},{wch:13},{wch:9}];
+  XLSX.utils.book_append_sheet(wb,ws4,'Tareas');
+
+  XLSX.writeFile(wb,'reporte-tablero-'+hoy.toISOString().slice(0,10)+'.xlsx');
+  toast('Reporte descargado 📊');
+});
 
 /* ============ Header ============ */
 $('btnNew').addEventListener('click',()=>openModal(null));
