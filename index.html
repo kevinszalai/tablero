@@ -636,11 +636,13 @@ body.focus-mode .sub-pill.sub-add{text-align:center;justify-content:center}
       <div class="field-grid" style="margin-top:20px">
         <div class="field">
           <label>Área solicitante</label>
-          <input type="text" id="fArea" placeholder="Comercial, Producto…">
+          <input type="text" id="fArea" list="areasList" placeholder="Comercial, Producto…" autocomplete="off">
+          <datalist id="areasList"></datalist>
         </div>
         <div class="field">
           <label>Persona que solicita</label>
-          <input type="text" id="fSolicitante" placeholder="Nombre">
+          <input type="text" id="fSolicitante" list="solicitantesList" placeholder="Nombre" autocomplete="off">
+          <datalist id="solicitantesList"></datalist>
         </div>
         <div class="field">
           <label>País</label>
@@ -700,6 +702,7 @@ body.focus-mode .sub-pill.sub-add{text-align:center;justify-content:center}
       <div class="modal-foot">
         <button class="btn btn-danger" id="btnDelete">Eliminar tarea</button>
         <button class="btn btn-ghost" id="btnSaveTpl" title="Guarda esta tarea como plantilla reutilizable">📋 Plantilla</button>
+        <button class="btn btn-ghost" id="btnCopy" title="Copia un resumen de la tarea para pegar en mail o WhatsApp">📄 Copiar resumen</button>
         <span class="save-status" id="saveStatus">Guardado ✓</span>
         <div class="spacer"></div>
         <button class="btn btn-primary" id="btnDone">✓ Listo</button>
@@ -1864,7 +1867,18 @@ function updateEntregaLabel(){
 }
 $('fSection').addEventListener('change',updateEntregaLabel);
 
+function fillDatalists(){
+  const vivas=tasks.filter(t=>!t.deleted);
+  const arma=(campo,listaId)=>{
+    const vals=[...new Set(vivas.map(t=>(t[campo]||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+    $(listaId).innerHTML=vals.map(v=>`<option value="${esc(v)}">`).join('');
+  };
+  arma('area','areasList');
+  arma('solicitante','solicitantesList');
+}
+
 function fillForm(t){
+  fillDatalists();
   $('fTitle').value=t.title||'';
   $('fArea').value=t.area||'';
   $('fSolicitante').value=t.solicitante||'';
@@ -2183,6 +2197,47 @@ document.querySelector('#overlay .modal').addEventListener('dblclick',e=>{
   // si tocó un campo puntual, lo deja enfocado para escribir directo
   const f=e.target.closest('input,select,.rich-editor,.ck-text');
   if(f&&f.focus)setTimeout(()=>f.focus(),30);
+});
+
+$('btnCopy').addEventListener('click',async()=>{
+  const SEC={activas:'Activa',seguimiento:'En seguimiento',eventos:'Evento',finalizadas:'Finalizada'};
+  const URG={alta:'Alta',media:'Media',baja:'Baja'};
+  const sec=$('fSection').value;
+  const esEvento=sec==='eventos';
+  const L=[];
+  L.push('📋 '+($('fTitle').value.trim()||'(sin nombre)'));
+  L.push('Estado: '+SEC[sec]);
+  const linea2=[];
+  if($('fArea').value.trim())linea2.push('Área: '+$('fArea').value.trim());
+  if($('fSolicitante').value.trim())linea2.push('Solicita: '+$('fSolicitante').value.trim());
+  if($('fPais').value.trim())linea2.push('País: '+$('fPais').value.trim());
+  if(linea2.length)L.push(linea2.join(' · '));
+  const fechas=[];
+  if(!esEvento&&$('fFechaSolicitud').value)fechas.push('Solicitada: '+fmtDate($('fFechaSolicitud').value));
+  if(esEvento&&$('fFechaEntregas').value)fechas.push('Entregas: '+fmtDate($('fFechaEntregas').value));
+  if($('fFechaEntrega').value)fechas.push((esEvento?'Evento: ':'Entrega: ')+fmtDate($('fFechaEntrega').value));
+  if(fechas.length)L.push(fechas.join(' · '));
+  const extras=[];
+  if(URG[modalUrgency])extras.push('Urgencia: '+URG[modalUrgency]);
+  if($('fTag').value.trim())extras.push('Estado interno: '+$('fTag').value.trim());
+  if(extras.length)L.push(extras.join(' · '));
+  if(modalChecklist.length){
+    const hechas=modalChecklist.filter(i=>i.done).length;
+    L.push('');
+    L.push(`Avance (${hechas}/${modalChecklist.length}):`);
+    modalChecklist.forEach(i=>L.push((i.done?'✔ ':'☐ ')+i.text));
+  }
+  const texto=L.join('\n');
+  try{
+    await navigator.clipboard.writeText(texto);
+    toast('Resumen copiado 📄 listo para pegar');
+  }catch(e){
+    // fallback para contextos sin clipboard API
+    const ta=document.createElement('textarea');
+    ta.value=texto;document.body.appendChild(ta);
+    ta.select();document.execCommand('copy');ta.remove();
+    toast('Resumen copiado 📄 listo para pegar');
+  }
 });
 
 $('btnClose').addEventListener('click',closeModal);
