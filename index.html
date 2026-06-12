@@ -246,6 +246,8 @@ main{max-width:1180px;margin:0 auto;padding:28px 20px}
 }
 .due-badge small{display:block;font-size:9px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;opacity:.75}
 .due-badge.late{background:#FDEDF1;color:#C01D44;border-color:#F6C3D0}
+.due-badge.entregas{background:#FFF3C9;color:#8A6400;border-color:#EFD98F;font-weight:800}
+.due-badge.entregas.late{background:#FDEDF1;color:#C01D44;border-color:#F6C3D0}
 
 /* Modo lectura del modal */
 .modal.locked .field input,.modal.locked .field select{
@@ -597,7 +599,7 @@ main{max-width:1180px;margin:0 auto;padding:28px 20px}
       </div>
       <div id="checklist"></div>
       <div class="add-check" id="addCheckRow">
-        <input type="text" id="newCheckItem" placeholder="Nueva subtarea… (Enter para agregar)">
+        <input type="text" id="newCheckItem" placeholder="Nueva subtarea…">
         <button class="icon-btn" id="btnAddCheck" title="Agregar subtarea" style="width:38px;height:38px">＋</button>
       </div>
 
@@ -611,8 +613,24 @@ main{max-width:1180px;margin:0 auto;padding:28px 20px}
           <input type="text" id="fSolicitante" placeholder="Nombre">
         </div>
         <div class="field">
+          <label>País</label>
+          <input type="text" id="fPais" list="paisesList" placeholder="Escribí y elegí…" autocomplete="off">
+          <datalist id="paisesList">
+            <option value="Argentina"><option value="Bolivia"><option value="Chile">
+            <option value="Colombia"><option value="Costa Rica"><option value="Ecuador">
+            <option value="El Salvador"><option value="Guatemala"><option value="Honduras">
+            <option value="México"><option value="Nicaragua"><option value="Panamá">
+            <option value="Paraguay"><option value="Perú"><option value="República Dominicana">
+            <option value="Uruguay">
+          </datalist>
+        </div>
+        <div class="field" id="fSolicitudWrap">
           <label>Fecha de solicitud</label>
           <input type="date" id="fFechaSolicitud">
+        </div>
+        <div class="field" id="fEntregasWrap" style="display:none">
+          <label>Fecha de entregas ⚑</label>
+          <input type="date" id="fFechaEntregas" title="Fecha límite para entregar las piezas del evento">
         </div>
         <div class="field">
           <label id="fEntregaLabel">Fecha pedida de entrega</label>
@@ -944,10 +962,20 @@ let showOldDone=false;
 const ARCHIVE_DAYS=60;
 
 /* ============ Filtros rápidos ============ */
-const activeFilters={urg:new Set(),area:new Set(),tag:new Set()};
+const activeFilters={urg:new Set(),area:new Set(),tag:new Set(),pais:new Set()};
 
 /* Tareas visibles en el tablero (excluye papelera y plantillas) */
 function alive(){return tasks.filter(t=>!t.deleted&&!t.isTemplate)}
+
+/* Países habilitados y sus banderas */
+const PAISES=['Argentina','Bolivia','Chile','Colombia','Costa Rica','Ecuador','El Salvador','Guatemala','Honduras','México','Nicaragua','Panamá','Paraguay','Perú','República Dominicana','Uruguay'];
+const BANDERAS={'Argentina':'🇦🇷','Bolivia':'🇧🇴','Chile':'🇨🇱','Colombia':'🇨🇴','Costa Rica':'🇨🇷','Ecuador':'🇪🇨','El Salvador':'🇸🇻','Guatemala':'🇬🇹','Honduras':'🇭🇳','México':'🇲🇽','Nicaragua':'🇳🇮','Panamá':'🇵🇦','Paraguay':'🇵🇾','Perú':'🇵🇪','República Dominicana':'🇩🇴','Uruguay':'🇺🇾'};
+function normalizaPais(v){
+  v=(v||'').trim();
+  if(!v)return '';
+  const m=PAISES.find(pp=>pp.toLowerCase()===v.toLowerCase());
+  return m||v;
+}
 
 /* Color consistente por área */
 const AREA_COLORS=['#7C4DFF','#00B8A9','#F4A261','#E76F51','#2A9D8F','#9B5DE5','#00BBF9','#F15BB5','#8AC926','#FF6B9D'];
@@ -961,9 +989,10 @@ function matchesFilters(t){
   if(activeFilters.urg.size&&!activeFilters.urg.has(t.urgencia||'sin'))return false;
   if(activeFilters.area.size&&!activeFilters.area.has(t.area||''))return false;
   if(activeFilters.tag.size&&!activeFilters.tag.has(t.tag||''))return false;
+  if(activeFilters.pais.size&&!activeFilters.pais.has(t.pais||''))return false;
   return true;
 }
-function hasActiveFilters(){return activeFilters.urg.size||activeFilters.area.size||activeFilters.tag.size}
+function hasActiveFilters(){return activeFilters.urg.size||activeFilters.area.size||activeFilters.tag.size||activeFilters.pais.size}
 
 function buildFilters(){
   const bar=$('filterBar');bar.innerHTML='';
@@ -991,11 +1020,14 @@ function buildFilters(){
   const tags=[...new Set(vivas.map(t=>(t.tag||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
   if(tags.length){mkLabel('Tag');tags.forEach(tg=>mkChip(esc(tg),'tag',tg));}
 
+  const paises=[...new Set(vivas.map(t=>(t.pais||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  if(paises.length){mkLabel('País');paises.forEach(pp=>mkChip(`${BANDERAS[pp]||'🌎'} ${esc(pp)}`,'pais',pp));}
+
   if(hasActiveFilters()){
     const c=document.createElement('button');
     c.className='chip chip-clear';c.textContent='✕ Limpiar filtros';
     c.addEventListener('click',()=>{
-      activeFilters.urg.clear();activeFilters.area.clear();activeFilters.tag.clear();
+      activeFilters.urg.clear();activeFilters.area.clear();activeFilters.tag.clear();activeFilters.pais.clear();
       render();
     });
     bar.appendChild(c);
@@ -1018,7 +1050,7 @@ function render(){
     let items=vivas.filter(t=>t.section===sec).sort((a,b)=>a.order-b.order);
     $(counts[sec]).textContent=items.length;
     if(q) items=items.filter(t=>
-      (t.title+' '+(t.area||'')+' '+(t.solicitante||'')+' '+(t.tag||'')).toLowerCase().includes(q)
+      (t.title+' '+(t.area||'')+' '+(t.solicitante||'')+' '+(t.tag||'')+' '+(t.pais||'')).toLowerCase().includes(q)
     );
     if(hasActiveFilters())items=items.filter(matchesFilters);
     if(!items.length){
@@ -1073,6 +1105,7 @@ function taskRow(t){
       <div class="task-meta">
         ${t.area?`<span><span class="adot" style="background:${areaColor(t.area)}"></span> <b>${esc(t.area)}</b></span>`:''}
         ${t.solicitante?`<span>👤 ${esc(t.solicitante)}</span>`:''}
+        ${t.pais?`<span>${BANDERAS[t.pais]||'🌎'} ${esc(t.pais)}</span>`:''}
         ${(imgs||files)?`<span class="attach-dot">${imgs?imgs+' img':''}${imgs&&files?' · ':''}${files?files+' adj':''}</span>`:''}
       </div>
       ${(()=>{
@@ -1087,6 +1120,12 @@ function taskRow(t){
       <div class="task-subs" data-subs></div>
     </div>
     <div class="task-side">
+      ${(t.section==='eventos'&&t.fechaEntregas)?(()=>{
+        const dE=diasHasta(t.fechaEntregas);
+        const lateE=dE!==null&&dE<0&&t.section!=='finalizadas';
+        const cerca=dE!==null&&dE>=0&&dE<=7;
+        return `<div class="due-badge entregas ${lateE||cerca?'late':''}"><small>Entregas${lateE?' ⚠':cerca?' ⏰':''}</small>${fmtDate(t.fechaEntregas)}</div>`;
+      })():''}
       ${t.fechaEntrega?`<div class="due-badge ${late?'late':''}"><small>${t.section==='eventos'?'Evento':'Entrega'}${late?' ⚠':''}</small>${fmtDate(t.fechaEntrega)}</div>`:''}
       <button class="mini-btn imp-btn${t.importante?' on':''}" data-imp title="${t.importante?'Quitar importante':'Marcar importante'}">${t.importante?'★':'☆'}</button>
       ${t.section!=='finalizadas'?`<button class="mini-btn done-btn" data-done title="Marcar finalizada">✓</button>`:''}
@@ -1561,13 +1600,13 @@ function renderChecklist(){
     box.appendChild(row);
   });
 }
-function addCheckItem(){
+function addCheckItem(refocus=true){
   const v=$('newCheckItem').value.trim();
   if(!v)return;
   modalChecklist.push({id:uid(),text:v,done:false});
   $('newCheckItem').value='';
   renderChecklist();scheduleSave(0);
-  $('newCheckItem').focus();
+  if(refocus)$('newCheckItem').focus();
 }
 document.addEventListener('DOMContentLoaded',()=>{});
 
@@ -1632,8 +1671,10 @@ function addAttachFiles(fileList){
 })();
 
 $('btnAddFile').addEventListener('click',()=>$('fileInput').click());
-$('btnAddCheck').addEventListener('click',addCheckItem);
-$('newCheckItem').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addCheckItem();}});
+$('btnAddCheck').addEventListener('click',()=>addCheckItem(true));
+$('newCheckItem').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addCheckItem(true);}});
+// sin Enter también: al salir del campo, lo escrito se suma solo
+$('newCheckItem').addEventListener('blur',()=>addCheckItem(false));
 $('fileInput').addEventListener('change',e=>{
   addAttachFiles(e.target.files);
   e.target.value='';
@@ -1673,7 +1714,7 @@ function setEditMode(on){
   const modal=document.querySelector('.modal');
   modal.classList.toggle('locked',!on);
   // readonly (no disabled) para que el doble click siga emitiendo eventos
-  ['fTitle','fArea','fSolicitante','fFechaSolicitud','fFechaEntrega','fTag'].forEach(id=>{$(id).readOnly=!on;$(id).disabled=false;});
+  ['fTitle','fArea','fSolicitante','fPais','fFechaSolicitud','fFechaEntrega','fFechaEntregas','fTag'].forEach(id=>{$(id).readOnly=!on;$(id).disabled=false;});
   $('fSection').disabled=!on; // los select no tienen readonly
   editor().contentEditable=on?'true':'false';
   $('btnInsertImg').style.display=on?'':'none';
@@ -1697,7 +1738,11 @@ $('btnEdit').addEventListener('click',()=>{
 });
 
 function updateEntregaLabel(){
-  $('fEntregaLabel').textContent=$('fSection').value==='eventos'?'Fecha del evento':'Fecha pedida de entrega';
+  const esEvento=$('fSection').value==='eventos';
+  $('fEntregaLabel').textContent=esEvento?'Fecha del evento':'Fecha pedida de entrega';
+  // en eventos, "Fecha de solicitud" se transforma en "Fecha de entregas"
+  $('fSolicitudWrap').style.display=esEvento?'none':'';
+  $('fEntregasWrap').style.display=esEvento?'':'none';
 }
 $('fSection').addEventListener('change',updateEntregaLabel);
 
@@ -1705,7 +1750,9 @@ function fillForm(t){
   $('fTitle').value=t.title||'';
   $('fArea').value=t.area||'';
   $('fSolicitante').value=t.solicitante||'';
+  $('fPais').value=t.pais||'';
   $('fFechaSolicitud').value=t.fechaSolicitud||'';
+  $('fFechaEntregas').value=t.fechaEntregas||'';
   $('fFechaEntrega').value=t.fechaEntrega||'';
   $('fTag').value=t.tag||'';
   $('fSection').value=t.section||'activas';
@@ -1779,7 +1826,9 @@ async function autoSave(){
   Object.assign(t,{
     title:$('fTitle').value.trim(),
     area:$('fArea').value.trim(),solicitante:$('fSolicitante').value.trim(),
+    pais:normalizaPais($('fPais').value),
     fechaSolicitud:$('fFechaSolicitud').value,fechaEntrega:$('fFechaEntrega').value,
+    fechaEntregas:$('fFechaEntregas').value,
     urgencia:modalUrgency,tag:$('fTag').value.trim(),
     descHtml:sanitize(editor().innerHTML),files:modalFiles,
     checklist:JSON.parse(JSON.stringify(modalChecklist)),
@@ -1803,8 +1852,8 @@ async function autoSave(){
 }
 
 /* Cualquier cambio dispara el autoguardado */
-['fTitle','fArea','fSolicitante','fTag'].forEach(id=>$(id).addEventListener('input',()=>scheduleSave()));
-['fFechaSolicitud','fFechaEntrega','fSection'].forEach(id=>$(id).addEventListener('change',()=>scheduleSave(0)));
+['fTitle','fArea','fSolicitante','fPais','fTag'].forEach(id=>$(id).addEventListener('input',()=>scheduleSave()));
+['fFechaSolicitud','fFechaEntrega','fFechaEntregas','fSection'].forEach(id=>$(id).addEventListener('change',()=>scheduleSave(0)));
 $('editor').addEventListener('input',()=>scheduleSave());
 
 /* Deshacer: vuelve un paso atrás en el historial (hasta 50) */
@@ -2110,14 +2159,15 @@ $('btnReport').addEventListener('click',()=>{
   // --- Hoja 4: Detalle de tareas ---
   const SEC={activas:'Activas',seguimiento:'En seguimiento',eventos:'Eventos y otros',finalizadas:'Finalizadas'};
   const URG={alta:'Alta',media:'Media',baja:'Baja',sin:''};
-  const detalle=[['Título','Sección','Importante','Área','Solicitante','Urgencia','Tag','F. solicitud','F. entrega','Vencida','F. finalización','Días resolución','Checklist']];
+  const detalle=[['Título','Sección','Importante','Área','Solicitante','País','Urgencia','Tag','F. solicitud','F. entrega/evento','F. entregas (evento)','Vencida','F. finalización','Días resolución','Checklist']];
   data.slice().sort((a,b)=>(a.section>b.section?1:-1)).forEach(t=>{
     const ck=(t.checklist||[]);
     detalle.push([
-      t.title||'(sin nombre)',SEC[t.section]||t.section,t.importante?'★':'',t.area||'',t.solicitante||'',
+      t.title||'(sin nombre)',SEC[t.section]||t.section,t.importante?'★':'',t.area||'',t.solicitante||'',t.pais||'',
       URG[t.urgencia]||'',t.tag||'',
       t.fechaSolicitud?fmtDate(t.fechaSolicitud):'',
       t.fechaEntrega?fmtDate(t.fechaEntrega):'',
+      t.fechaEntregas?fmtDate(t.fechaEntregas):'',
       (t.section!=='finalizadas'&&isLate(t))?'SÍ':'',
       t.finishedAt?new Date(t.finishedAt).toLocaleDateString('es-AR'):'',
       (t.finishedAt&&t.createdAt)?diasEntre(t.createdAt,t.finishedAt):'',
@@ -2125,7 +2175,7 @@ $('btnReport').addEventListener('click',()=>{
     ]);
   });
   const ws4=XLSX.utils.aoa_to_sheet(detalle);
-  ws4['!cols']=[{wch:38},{wch:15},{wch:5},{wch:16},{wch:16},{wch:9},{wch:12},{wch:12},{wch:11},{wch:8},{wch:14},{wch:13},{wch:9}];
+  ws4['!cols']=[{wch:38},{wch:15},{wch:5},{wch:16},{wch:16},{wch:14},{wch:9},{wch:12},{wch:12},{wch:14},{wch:14},{wch:8},{wch:14},{wch:13},{wch:9}];
   XLSX.utils.book_append_sheet(wb,ws4,'Tareas');
 
   XLSX.writeFile(wb,'reporte-tablero-'+hoy.toISOString().slice(0,10)+'.xlsx');
