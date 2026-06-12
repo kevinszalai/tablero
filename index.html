@@ -1100,12 +1100,12 @@ function taskRow(t){
     <div class="task-body">
       <div class="task-top">
         <span class="task-title">${esc(t.title)||'(sin nombre)'}</span>
-        <span class="tag-chip ${t.tag?'':'empty'}" data-tagchip>${t.tag?esc(t.tag):'+ tag'}</span>
+        ${expandedSubs.has(t.id)?`<span class="tag-chip ${t.tag?'':'empty'}" data-tagchip>${t.tag?esc(t.tag):'+ tag'}</span>`:''}
       </div>
       <div class="task-meta">
         ${t.area?`<span><span class="adot" style="background:${areaColor(t.area)}"></span> <b>${esc(t.area)}</b></span>`:''}
         ${t.solicitante?`<span>👤 ${esc(t.solicitante)}</span>`:''}
-        ${t.pais?`<span>${BANDERAS[t.pais]||'🌎'} ${esc(t.pais)}</span>`:''}
+        ${(t.pais&&expandedSubs.has(t.id))?`<span>${BANDERAS[t.pais]||'🌎'} ${esc(t.pais)}</span>`:''}
         ${(imgs||files)?`<span class="attach-dot">${imgs?imgs+' img':''}${imgs&&files?' · ':''}${files?files+' adj':''}</span>`:''}
       </div>
       ${(()=>{
@@ -1199,8 +1199,9 @@ function taskRow(t){
     await persist(t);render();
     toast(t.section==='activas'?'Movida a Activas':'Movida a En seguimiento');
   });
-  // Edición inline del tag desde la fila
-  el.querySelector('[data-tagchip]').addEventListener('click',e=>{
+  // Edición inline del tag desde la fila (solo visible con la fila desplegada)
+  const tagChip=el.querySelector('[data-tagchip]');
+  if(tagChip)tagChip.addEventListener('click',e=>{
     e.stopPropagation();
     const chip=e.currentTarget;
     const input=document.createElement('input');
