@@ -394,6 +394,7 @@ main{max-width:1180px;margin:0 auto;padding:28px 20px}
   transition:border-color .15s;
 }
 .rich-editor:focus{outline:none;border-color:var(--azul);background:#fff}
+.rich-editor.drop-hover{border-color:var(--cyan);border-style:dashed;background:#F0FBFE}
 .rich-editor:empty::before{content:attr(data-placeholder);color:#9AA7B4;pointer-events:none}
 .rich-editor img{
   max-width:100%;border-radius:9px;display:block;margin:10px 0;
@@ -558,7 +559,7 @@ main{max-width:1180px;margin:0 auto;padding:28px 20px}
       </div>
       <div class="rich-editor" id="editor" contenteditable="true"
            data-placeholder="Escribí el detalle acá. Podés intercalar texto e imágenes: escribís, insertás una imagen donde está el cursor, y seguís escribiendo debajo. También podés pegar capturas directo con Ctrl+V."></div>
-      <div class="editor-hint" id="editorHint">Tip: pegá capturas de pantalla con Ctrl+V directo en el texto. Doble click sobre una imagen para verla ampliada.</div>
+      <div class="editor-hint" id="editorHint">Tip: pegá capturas con Ctrl+V o arrastrá imágenes directo al texto — se insertan donde las soltás. Doble click sobre una imagen para verla ampliada.</div>
       <input type="file" id="editorImgInput" accept="image/*" hidden>
 
       <div class="block-head">
@@ -1328,6 +1329,44 @@ $('editorImgInput').addEventListener('change',e=>{
   compressImage(f,url=>insertImageAtCaret(url));
   e.target.value='';
 });
+
+/* Arrastrar imágenes al editor: se insertan donde las soltás */
+(()=>{
+  const ed=document.getElementById('editor');
+  ed.addEventListener('dragover',e=>{
+    if(!editMode)return;
+    if([...(e.dataTransfer.items||[])].some(i=>i.kind==='file')){
+      e.preventDefault();
+      ed.classList.add('drop-hover');
+    }
+  });
+  ed.addEventListener('dragleave',()=>ed.classList.remove('drop-hover'));
+  ed.addEventListener('drop',e=>{
+    ed.classList.remove('drop-hover');
+    if(!editMode)return;
+    const files=[...(e.dataTransfer.files||[])].filter(f=>f.type.startsWith('image/'));
+    if(!files.length)return;
+    e.preventDefault();
+    // ubicar el cursor exactamente donde soltó
+    let range=null;
+    if(document.caretRangeFromPoint){
+      range=document.caretRangeFromPoint(e.clientX,e.clientY);
+    }else if(document.caretPositionFromPoint){
+      const pos=document.caretPositionFromPoint(e.clientX,e.clientY);
+      if(pos){range=document.createRange();range.setStart(pos.offsetNode,pos.offset);range.collapse(true);}
+    }
+    if(range&&ed.contains(range.startContainer)){
+      const sel=window.getSelection();
+      sel.removeAllRanges();sel.addRange(range);
+    }
+    files.forEach(f=>compressImage(f,url=>insertImageAtCaret(url)));
+  });
+  // red de seguridad: si la imagen cae fuera del editor con el modal abierto,
+  // que el navegador no navegue a la imagen y te haga perder lo que estabas haciendo
+  ['dragover','drop'].forEach(ev=>document.addEventListener(ev,e=>{
+    if($('overlay').classList.contains('open')&&!ed.contains(e.target))e.preventDefault();
+  }));
+})();
 
 /* Pegar: imágenes del portapapeles se insertan; texto entra plano (sin estilos ajenos) */
 document.addEventListener('paste',e=>{
