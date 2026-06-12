@@ -991,6 +991,7 @@ function alive(){return tasks.filter(t=>!t.deleted&&!t.isTemplate)}
 
 /* Países habilitados y sus banderas */
 const PAISES=['Argentina','Bolivia','Chile','Colombia','Costa Rica','Ecuador','El Salvador','Guatemala','Honduras','México','Nicaragua','Panamá','Paraguay','Perú','República Dominicana','Uruguay'];
+const GSA_PAISES=['Bolivia','Costa Rica','Ecuador','El Salvador','Guatemala','Honduras','Nicaragua','Paraguay','Perú','República Dominicana','Uruguay'];
 const BANDERAS={'Argentina':'🇦🇷','Bolivia':'🇧🇴','Chile':'🇨🇱','Colombia':'🇨🇴','Costa Rica':'🇨🇷','Ecuador':'🇪🇨','El Salvador':'🇸🇻','Guatemala':'🇬🇹','Honduras':'🇭🇳','México':'🇲🇽','Nicaragua':'🇳🇮','Panamá':'🇵🇦','Paraguay':'🇵🇾','Perú':'🇵🇪','República Dominicana':'🇩🇴','Uruguay':'🇺🇾'};
 function normalizaPais(v){
   v=(v||'').trim();
@@ -1011,7 +1012,11 @@ function matchesFilters(t){
   if(activeFilters.urg.size&&!activeFilters.urg.has(t.urgencia||'sin'))return false;
   if(activeFilters.area.size&&!activeFilters.area.has(t.area||''))return false;
   if(activeFilters.tag.size&&!activeFilters.tag.has(t.tag||''))return false;
-  if(activeFilters.pais.size&&!activeFilters.pais.has(t.pais||''))return false;
+  if(activeFilters.pais.size){
+    const okDirecto=activeFilters.pais.has(t.pais||'');
+    const okGSA=activeFilters.pais.has('__GSA__')&&GSA_PAISES.includes(t.pais||'');
+    if(!okDirecto&&!okGSA)return false;
+  }
   return true;
 }
 function hasActiveFilters(){return activeFilters.urg.size||activeFilters.area.size||activeFilters.tag.size||activeFilters.pais.size}
@@ -1042,8 +1047,14 @@ function buildFilters(){
   const tags=[...new Set(vivas.map(t=>(t.tag||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
   if(tags.length){mkLabel('Tag');tags.forEach(tg=>mkChip(esc(tg),'tag',tg));}
 
-  const paises=[...new Set(vivas.map(t=>(t.pais||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
-  if(paises.length){mkLabel('País');paises.forEach(pp=>mkChip(`${BANDERAS[pp]||'🌎'} ${esc(pp)}`,'pais',pp));}
+  const paisesUsados=[...new Set(vivas.map(t=>(t.pais||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  const individuales=paisesUsados.filter(pp=>!GSA_PAISES.includes(pp));
+  const hayGSA=paisesUsados.some(pp=>GSA_PAISES.includes(pp));
+  if(individuales.length||hayGSA){
+    mkLabel('País');
+    individuales.forEach(pp=>mkChip(`${BANDERAS[pp]||'🌎'} ${esc(pp)}`,'pais',pp));
+    if(hayGSA)mkChip('🌎 GSA','pais','__GSA__');
+  }
 
   if(hasActiveFilters()){
     const c=document.createElement('button');
