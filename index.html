@@ -125,6 +125,15 @@ main{max-width:1180px;margin:0 auto;padding:28px 20px}
 .chip[data-u="baja"] .cdot{background:var(--teal)}
 .chip-clear{border-style:dashed;color:#C01D44}
 
+/* ---------- Vista de sección única: más info, tarjetas en 2 columnas ---------- */
+body.single-sec .task-list{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px;align-content:start;
+}
+body.single-sec .empty-msg,body.single-sec .old-toggle{grid-column:1/-1}
+body.single-sec .task-snippet{-webkit-line-clamp:4}
+@media(max-width:740px){body.single-sec .task-list{grid-template-columns:1fr}}
+
 /* ---------- Modo enfoque (doble click en el nombre) ---------- */
 .focus-bar{
   max-width:1180px;margin:14px auto 0;padding:0 20px;
@@ -1096,6 +1105,8 @@ function render(){
   $('focusBar').style.display=focusedTask?'flex':'none';
   if(ftarea)$('focusTitle').textContent=ftarea.title||'(sin nombre)';
   document.body.classList.toggle('focus-mode',!!focusedTask);
+  denseInfo=!focusedTask&&activeFilters.sec.size===1;
+  document.body.classList.toggle('single-sec',denseInfo);
 
   const vivas=alive();
   ['activas','seguimiento','eventos','finalizadas'].forEach(sec=>{
@@ -1174,12 +1185,13 @@ function taskRow(t){
     <div class="task-body">
       <div class="task-top">
         <span class="task-title">${esc(t.title)||'(sin nombre)'}</span>
-        ${isExpanded(t)?`<span class="tag-chip ${t.tag?'':'empty'}" data-tagchip>${t.tag?esc(t.tag):'+ tag'}</span>`:''}
+        ${(isExpanded(t)||denseInfo)?`<span class="tag-chip ${t.tag?'':'empty'}" data-tagchip>${t.tag?esc(t.tag):'+ tag'}</span>`:''}
       </div>
       <div class="task-meta">
         ${t.area?`<span><span class="adot" style="background:${areaColor(t.area)}"></span> <b>${esc(t.area)}</b></span>`:''}
         ${t.solicitante?`<span>👤 ${esc(t.solicitante)}</span>`:''}
-        ${(t.pais&&isExpanded(t))?`<span>${BANDERAS[t.pais]||'🌎'} ${esc(t.pais)}</span>`:''}
+        ${(t.pais&&(isExpanded(t)||denseInfo))?`<span>${BANDERAS[t.pais]||'🌎'} ${esc(t.pais)}</span>`:''}
+        ${(denseInfo&&t.fechaSolicitud)?`<span>Solicitada: ${fmtDate(t.fechaSolicitud)}</span>`:''}
         ${(imgs||files)?`<span class="attach-dot">${imgs?imgs+' img':''}${imgs&&files?' · ':''}${files?files+' adj':''}</span>`:''}
       </div>
       ${(()=>{
@@ -1319,6 +1331,7 @@ function taskRow(t){
 const expandedSubs=new Set(); // tareas con la lista de pendientes desplegada
 let focusedTask=null;          // modo enfoque: solo se ve esta tarea
 const rowClick={t:0,id:null,enTitulo:false,timer:null}; // detector de click simple vs doble
+let denseInfo=false; // vista de una sola sección: tarjetas con más info, en dos columnas
 function isExpanded(t){return expandedSubs.has(t.id)||focusedTask===t.id}
 
 function buildRowSubs(box,t){
@@ -1326,7 +1339,8 @@ function buildRowSubs(box,t){
   const pend=(t.checklist||[]).filter(i=>!i.done);
   const enFoco=focusedTask===t.id;
   const expanded=expandedSubs.has(t.id)||enFoco;
-  const visibles=expanded?pend:pend.slice(0,3);
+  const lim=denseInfo?6:3;
+  const visibles=expanded?pend:pend.slice(0,lim);
 
   visibles.forEach(item=>{
     const pill=document.createElement('span');
@@ -1369,14 +1383,14 @@ function buildRowSubs(box,t){
     box.appendChild(pill);
   });
 
-  if(!expanded&&pend.length>3){
+  if(!expanded&&pend.length>lim){
     const more=document.createElement('span');
-    more.className='sub-pill more';more.textContent=`+${pend.length-3} más`;
+    more.className='sub-pill more';more.textContent=`+${pend.length-lim} más`;
     more.title='Ver todas las pendientes';
     more.addEventListener('click',ev=>{ev.stopPropagation();expandedSubs.add(t.id);render();});
     box.appendChild(more);
   }
-  if(expanded&&!enFoco&&pend.length>3){
+  if(expanded&&!enFoco&&pend.length>lim){
     const less=document.createElement('span');
     less.className='sub-pill more';less.textContent='ver menos';
     less.addEventListener('click',ev=>{ev.stopPropagation();expandedSubs.delete(t.id);render();});
