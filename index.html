@@ -83,6 +83,13 @@ main{max-width:1180px;margin:0 auto;padding:28px 20px}
 .done-row{opacity:.72}
 .done-row .task-title{text-decoration:line-through;text-decoration-color:#B9C3CE;text-decoration-thickness:1.5px}
 .done-btn:hover{background:#E6F3F4;color:var(--teal)}
+.old-toggle{
+  width:100%;border:1.5px dashed var(--line);background:transparent;
+  border-radius:var(--radius);padding:11px;color:var(--ink-soft);
+  font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;
+  transition:all .15s;
+}
+.old-toggle:hover{border-color:var(--azul);color:var(--azul)}
 
 .section{margin-bottom:36px}
 .section-head{display:flex;align-items:baseline;gap:10px;margin-bottom:14px}
@@ -454,6 +461,7 @@ main{max-width:1180px;margin:0 auto;padding:28px 20px}
 <div class="img-zoom" id="imgZoom"><img src="" alt=""></div>
 <div class="toast" id="toast"></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
@@ -685,6 +693,9 @@ function fileIcon(mime,name){
 }
 
 /* ============ Render del tablero ============ */
+let showOldDone=false;
+const ARCHIVE_DAYS=60;
+
 function render(){
   const q=$('search').value.trim().toLowerCase();
   const counts={activas:'countActivas',seguimiento:'countSeguimiento',finalizadas:'countFinalizadas'};
@@ -705,6 +716,27 @@ function render(){
       list.innerHTML=`<div class="empty-msg">${q?'Sin resultados acá.':empties[sec]}</div>`;
       return;
     }
+    if(sec==='finalizadas'){
+      // Las finalizadas hace más de 60 días se colapsan en "Ver anteriores"
+      const cutoff=Date.now()-ARCHIVE_DAYS*24*3600*1000;
+      const recientes=items.filter(t=>!t.finishedAt||t.finishedAt>=cutoff);
+      const viejas=items.filter(t=>t.finishedAt&&t.finishedAt<cutoff);
+      recientes.forEach(t=>list.appendChild(taskRow(t)));
+      if(viejas.length){
+        const btn=document.createElement('button');
+        btn.className='old-toggle';
+        btn.textContent=showOldDone
+          ?`Ocultar anteriores (${viejas.length})`
+          :`Ver anteriores (${viejas.length}) · finalizadas hace más de ${ARCHIVE_DAYS} días`;
+        btn.addEventListener('click',()=>{showOldDone=!showOldDone;render();});
+        list.appendChild(btn);
+        if(showOldDone)viejas.forEach(t=>list.appendChild(taskRow(t)));
+      }
+      if(!recientes.length&&!viejas.length){
+        list.innerHTML=`<div class="empty-msg">${empties[sec]}</div>`;
+      }
+      return;
+    }
     items.forEach(t=>list.appendChild(taskRow(t)));
   });
 }
@@ -712,7 +744,6 @@ function render(){
 function taskRow(t){
   const el=document.createElement('div');
   el.className='task u-'+(t.urgencia||'sin');
-  el.draggable=true;
   el.dataset.id=t.id;
   const imgs=countImgs(t.descHtml);
   const files=(t.files||[]).length;
@@ -737,12 +768,13 @@ function taskRow(t){
     <div class="task-side">
       ${t.fechaEntrega?`<div class="due-badge ${late?'late':''}"><small>Entrega${late?' ⚠':''}</small>${fmtDate(t.fechaEntrega)}</div>`:''}
       ${t.section!=='finalizadas'?`<button class="mini-btn done-btn" data-done title="Marcar finalizada">✓</button>`:''}
+      <button class="mini-btn" data-dup title="Duplicar tarea">⧉</button>
       <button class="mini-btn" data-move title="${t.section==='activas'?'Mover a En seguimiento':t.section==='seguimiento'?'Volver a Activas':'Reactivar (vuelve a Activas)'}">${t.section==='activas'?'⤵':'⤴'}</button>
     </div>`;
   if(t.section==='finalizadas')el.classList.add('done-row');
 
   el.addEventListener('click',e=>{
-    if(e.target.closest('[data-move]')||e.target.closest('[data-done]')||e.target.closest('[data-tagchip]')||e.target.closest('[data-stripe]')||e.target.classList.contains('tag-input'))return;
+    if(e.target.closest('[data-move]')||e.target.closest('[data-done]')||e.target.closest('[data-dup]')||e.target.closest('[data-tagchip]')||e.target.closest('[data-stripe]')||e.target.classList.contains('tag-input'))return;
     openModal(t.id);
   });
   // Click en la franja: cicla la urgencia sin abrir el detalle
@@ -756,13 +788,28 @@ function taskRow(t){
   });
   const doneBtn=el.querySelector('[data-done]');
   if(doneBtn)doneBtn.addEventListener('click',async()=>{
-    t.section='finalizadas';
+    setSection(t,'finalizadas');
     t.order=maxOrder('finalizadas')+1;
     await persist(t);render();
     toast('Finalizada ✓');
   });
+  // Duplicar: copia el contenido, con fechas de solicitud/entrega frescas
+  el.querySelector('[data-dup]').addEventListener('click',async()=>{
+    const c=JSON.parse(JSON.stringify(t));
+    c.id=uid();
+    c.createdAt=Date.now();
+    c.title=(t.title||'Tarea')+' (copia)';
+    c.fechaSolicitud=new Date().toISOString().slice(0,10);
+    c.fechaEntrega='';
+    delete c.finishedAt;
+    c.section=t.section==='finalizadas'?'activas':t.section; // duplicar una finalizada la reactiva
+    c.order=maxOrder(c.section)+1;
+    tasks.push(c);
+    await persist(c);render();
+    toast('Tarea duplicada ⧉');
+  });
   el.querySelector('[data-move]').addEventListener('click',async()=>{
-    t.section=t.section==='activas'?'seguimiento':'activas';
+    setSection(t,t.section==='activas'?'seguimiento':'activas');
     t.order=maxOrder(t.section)+1;
     await persist(t);render();
     toast(t.section==='activas'?'Movida a Activas':'Movida a En seguimiento');
@@ -787,12 +834,6 @@ function taskRow(t){
     input.addEventListener('click',ev=>ev.stopPropagation());
   });
 
-  el.addEventListener('dragstart',e=>{
-    e.dataTransfer.setData('text/plain',t.id);
-    e.dataTransfer.effectAllowed='move';
-    requestAnimationFrame(()=>el.classList.add('dragging'));
-  });
-  el.addEventListener('dragend',()=>el.classList.remove('dragging'));
   return el;
 }
 
@@ -801,29 +842,46 @@ function maxOrder(sec){
   return arr.length?Math.max(...arr.map(x=>x.order)):0;
 }
 
-document.querySelectorAll('.task-list').forEach(list=>{
-  list.addEventListener('dragover',e=>{
-    e.preventDefault();e.dataTransfer.dropEffect='move';
-    list.classList.add('drag-over');
+/* Cambia la sección registrando cuándo se finalizó (para el archivado) */
+function setSection(t,sec){
+  if(sec==='finalizadas'&&t.section!=='finalizadas')t.finishedAt=Date.now();
+  if(sec!=='finalizadas')delete t.finishedAt;
+  t.section=sec;
+}
+
+/* Drag & drop con SortableJS: funciona con mouse y con touch (celular) */
+function initSortable(){
+  document.querySelectorAll('.task-list').forEach(list=>{
+    new Sortable(list,{
+      group:'tablero',
+      animation:150,
+      draggable:'.task',
+      handle:'.drag-handle',
+      delay:120,
+      delayOnTouchOnly:true,
+      ghostClass:'dragging',
+      onEnd:async evt=>{
+        const conts=new Set([evt.from,evt.to]);
+        const changed=[];
+        conts.forEach(cont=>{
+          const sec=cont.dataset.section;
+          const ids=[...cont.querySelectorAll('.task')].map(el=>el.dataset.id);
+          ids.forEach((id,i)=>{
+            const t=tasks.find(x=>x.id===id);
+            if(!t)return;
+            if(t.section!==sec||t.order!==i+1){
+              if(t.section!==sec)setSection(t,sec);
+              t.order=i+1;
+              changed.push(t);
+            }
+          });
+        });
+        for(const t of changed)await persist(t);
+        render();
+      }
+    });
   });
-  list.addEventListener('dragleave',e=>{
-    if(!list.contains(e.relatedTarget))list.classList.remove('drag-over');
-  });
-  list.addEventListener('drop',async e=>{
-    e.preventDefault();list.classList.remove('drag-over');
-    const id=e.dataTransfer.getData('text/plain');
-    const t=tasks.find(x=>x.id===id);if(!t)return;
-    const sec=list.dataset.section;
-    const rows=[...list.querySelectorAll('.task:not(.dragging)')];
-    let idx=rows.findIndex(r=>e.clientY<r.getBoundingClientRect().top+r.offsetHeight/2);
-    if(idx===-1)idx=rows.length;
-    const others=tasks.filter(x=>x.section===sec&&x.id!==id).sort((a,b)=>a.order-b.order);
-    others.splice(idx,0,t);
-    t.section=sec;
-    for(let i=0;i<others.length;i++){others[i].order=i+1;await persist(others[i]);}
-    render();
-  });
-});
+}
 
 /* ============ Editor: imágenes intercaladas ============ */
 function compressImage(file,cb){
@@ -1067,7 +1125,7 @@ async function autoSave(){
     creating=true;
   }
   const newSec=$('fSection').value;
-  if(t.section!==newSec){t.section=newSec;t.order=maxOrder(newSec)+1;}
+  if(t.section!==newSec){setSection(t,newSec);t.order=maxOrder(newSec)+1;}
   Object.assign(t,{
     title:$('fTitle').value.trim(),
     area:$('fArea').value.trim(),solicitante:$('fSolicitante').value.trim(),
@@ -1245,6 +1303,7 @@ async function migrate(){
   tasks=await dbAll();
   await migrate();
   render();
+  initSortable();
   startSync();
 })();
 </script>
