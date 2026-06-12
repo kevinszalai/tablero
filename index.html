@@ -83,8 +83,9 @@ header{
 
 main{max-width:1180px;margin:0 auto;padding:28px 20px}
 .columns{
-  display:grid;grid-template-columns:repeat(3,1fr);gap:24px;align-items:start;
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;align-items:start;
 }
+.columns>.section{min-width:0}
 @media(max-width:1080px){.columns{grid-template-columns:1fr 1fr}}
 @media(max-width:740px){.columns{grid-template-columns:1fr;gap:0}}
 
@@ -209,6 +210,7 @@ main{max-width:1180px;margin:0 auto;padding:28px 20px}
 }
 
 .task{
+  min-width:0;
   background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
   box-shadow:var(--shadow);cursor:pointer;position:relative;overflow:hidden;
   display:flex;align-items:stretch;
@@ -217,8 +219,9 @@ main{max-width:1180px;margin:0 auto;padding:28px 20px}
 .task:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(22,33,46,.12)}
 .task.dragging{opacity:.45}
 .task-snippet{
-  font-size:12.5px;color:var(--ink-soft);margin-top:6px;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;
+  font-size:12.5px;color:var(--ink-soft);margin-top:6px;line-height:1.45;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  overflow:hidden;overflow-wrap:anywhere;
 }
 .due-badge{
   font-size:11px;font-weight:700;background:#EAF3FB;color:var(--azul);
@@ -258,7 +261,7 @@ main{max-width:1180px;margin:0 auto;padding:28px 20px}
 
 .task-body{flex:1;padding:14px 16px;min-width:0}
 .task-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.task-title{font-weight:600;font-size:15px;letter-spacing:-.01em}
+.task-title{font-weight:600;font-size:15px;letter-spacing:-.01em;overflow-wrap:anywhere;min-width:0}
 .tag-chip{
   font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
   background:#EAF3FB;color:var(--azul);border:1px solid #C9E0F2;
@@ -830,7 +833,7 @@ function countImgs(html){
 function stripHtml(html){
   if(!html)return '';
   const d=document.createElement('div');d.innerHTML=html;
-  return (d.textContent||'').replace(/\s+/g,' ').trim().slice(0,140);
+  return (d.textContent||'').replace(/\s+/g,' ').trim().slice(0,220);
 }
 function fileIcon(mime,name){
   const n=(name||'').toLowerCase();
