@@ -150,6 +150,18 @@ main{max-width:1180px;margin:0 auto;padding:28px 20px}
   padding:3px 9px;white-space:nowrap;max-width:240px;
   overflow:hidden;text-overflow:ellipsis;
 }
+.event-alert{
+  display:inline-flex;align-items:center;gap:6px;margin-top:8px;
+  font-size:12px;font-weight:700;color:#8A6400;
+  background:#FFF3C9;border:1px solid #EFD98F;border-radius:8px;
+  padding:5px 11px;
+}
+.event-alert.hot{
+  color:#C01D44;background:#FDEDF1;border-color:#F6C3D0;
+  animation:pulse-alert 1.6s ease-in-out infinite;
+}
+@keyframes pulse-alert{0%,100%{opacity:1}50%{opacity:.55}}
+.task.subs-open{border-color:var(--cyan);box-shadow:0 0 0 1px var(--cyan),var(--shadow)}
 .sub-pill.more{color:var(--ink-soft);border-style:dashed;cursor:pointer}
 .sub-pill.more:hover{border-color:var(--azul);color:var(--azul)}
 .sub-pill{display:inline-flex;align-items:center;gap:6px}
@@ -395,6 +407,24 @@ main{max-width:1180px;margin:0 auto;padding:28px 20px}
 }
 .rich-editor:focus{outline:none;border-color:var(--azul);background:#fff}
 .rich-editor.drop-hover{border-color:var(--cyan);border-style:dashed;background:#F0FBFE}
+.rich-editor{position:relative}
+.img-resize-box{
+  position:absolute;border:1.5px dashed var(--cyan);
+  pointer-events:none;z-index:5;
+}
+.img-handle{
+  position:absolute;width:14px;height:14px;background:var(--azul);
+  border:2.5px solid #fff;border-radius:50%;pointer-events:auto;
+  box-shadow:0 1px 4px rgba(0,0,0,.25);touch-action:none;
+}
+.img-handle.nw{top:-7px;left:-7px;cursor:nwse-resize}
+.img-handle.ne{top:-7px;right:-7px;cursor:nesw-resize}
+.img-handle.sw{bottom:-7px;left:-7px;cursor:nesw-resize}
+.img-handle.se{bottom:-7px;right:-7px;cursor:nwse-resize}
+#filesList.drop-hover{
+  outline:2px dashed var(--cyan);outline-offset:5px;border-radius:10px;
+  background:#F0FBFE;
+}
 .rich-editor:empty::before{content:attr(data-placeholder);color:#9AA7B4;pointer-events:none}
 .rich-editor img{
   max-width:100%;border-radius:9px;display:block;margin:10px 0;
@@ -849,6 +879,11 @@ function fmtSize(b){
   if(b<1048576) return (b/1024).toFixed(0)+' KB';
   return (b/1048576).toFixed(1)+' MB';
 }
+function diasHasta(fecha){
+  if(!fecha)return null;
+  const hoy=new Date();hoy.setHours(0,0,0,0);
+  return Math.round((new Date(fecha+'T00:00:00')-hoy)/(24*3600*1000));
+}
 function isLate(t){
   if(!t.fechaEntrega) return false;
   const today=new Date();today.setHours(0,0,0,0);
@@ -869,12 +904,13 @@ function sanitize(html){
         if(el.tagName==='IMG'&&n==='src'&&/^data:image\//.test(a.value))return;
         if(el.tagName==='A'&&n==='href'&&/^https?:/i.test(a.value))return;
         if(n==='style'){
-          // del style solo sobreviven color y fondo (negrita/resaltado/color)
-          const c=el.style.color,bg=el.style.backgroundColor,fw=el.style.fontWeight;
+          // del style solo sobreviven color, fondo, negrita y el ancho de imágenes
+          const c=el.style.color,bg=el.style.backgroundColor,fw=el.style.fontWeight,w=el.style.width;
           el.removeAttribute('style');
           if(c)el.style.color=c;
           if(bg)el.style.backgroundColor=bg;
           if(fw==='bold'||parseInt(fw)>=600)el.style.fontWeight='bold';
+          if(el.tagName==='IMG'&&/^\d+(\.\d+)?px$/.test(w))el.style.width=w;
           return;
         }
         el.removeAttribute(a.name);
@@ -1039,6 +1075,14 @@ function taskRow(t){
         ${t.solicitante?`<span>👤 ${esc(t.solicitante)}</span>`:''}
         ${(imgs||files)?`<span class="attach-dot">${imgs?imgs+' img':''}${imgs&&files?' · ':''}${files?files+' adj':''}</span>`:''}
       </div>
+      ${(()=>{
+        if(t.section!=='eventos'||!t.fechaEntrega)return '';
+        const d=diasHasta(t.fechaEntrega);
+        if(d===null||d<0||d>45)return '';
+        const hot=d<=14;
+        const txt=d===0?'¡El evento es HOY!':d===1?'El evento es mañana':`Faltan ${d} días para el evento`;
+        return `<div class="event-alert ${hot?'hot':''}">📣 ${txt}</div>`;
+      })()}
       ${snippet?`<div class="task-snippet">${esc(snippet)}</div>`:''}
       <div class="task-subs" data-subs></div>
     </div>
@@ -1051,10 +1095,26 @@ function taskRow(t){
     </div>`;
   if(t.section==='finalizadas')el.classList.add('done-row');
   if(t.importante)el.classList.add('important');
+  if(expandedSubs.has(t.id))el.classList.add('subs-open');
 
+  const esZonaInteractiva=e=>e.target.closest('[data-move]')||e.target.closest('[data-done]')||e.target.closest('[data-dup]')||e.target.closest('[data-tagchip]')||e.target.closest('[data-stripe]')||e.target.closest('[data-subs]')||e.target.closest('[data-imp]')||e.target.classList.contains('tag-input');
+  // click simple: abre el detalle (con una pequeña espera para detectar doble click)
   el.addEventListener('click',e=>{
-    if(e.target.closest('[data-move]')||e.target.closest('[data-done]')||e.target.closest('[data-dup]')||e.target.closest('[data-tagchip]')||e.target.closest('[data-stripe]')||e.target.closest('[data-subs]')||e.target.closest('[data-imp]')||e.target.classList.contains('tag-input'))return;
-    openModal(t.id);
+    if(esZonaInteractiva(e))return;
+    clearTimeout(el._clickT);
+    el._clickT=setTimeout(()=>openModal(t.id),260);
+  });
+  // doble click: despliega solo las subtareas de ESTA fila (las demás se colapsan)
+  el.addEventListener('dblclick',e=>{
+    if(esZonaInteractiva(e))return;
+    clearTimeout(el._clickT);
+    if(expandedSubs.has(t.id)){
+      expandedSubs.delete(t.id);
+    }else{
+      expandedSubs.clear();
+      expandedSubs.add(t.id);
+    }
+    render();
   });
   // Click en la franja: cicla la urgencia sin abrir el detalle
   el.querySelector('[data-stripe]').addEventListener('click',async e=>{
@@ -1368,6 +1428,65 @@ $('editorImgInput').addEventListener('change',e=>{
   }));
 })();
 
+/* ============ Redimensionar imágenes del editor (manijas en las esquinas) ============ */
+let selImg=null,resizeBox=null;
+function deselectImg(){
+  if(resizeBox){resizeBox.remove();resizeBox=null;}
+  selImg=null;
+}
+function selectImg(img){
+  deselectImg();
+  selImg=img;
+  resizeBox=document.createElement('div');
+  resizeBox.className='img-resize-box';
+  ['nw','ne','sw','se'].forEach(c=>{
+    const h=document.createElement('div');
+    h.className='img-handle '+c;
+    h.addEventListener('pointerdown',e=>startImgResize(e,c));
+    resizeBox.appendChild(h);
+  });
+  editor().appendChild(resizeBox);
+  placeResizeBox();
+}
+function placeResizeBox(){
+  if(!selImg||!resizeBox)return;
+  const ed=editor();
+  if(!ed.contains(selImg)){deselectImg();return;}
+  const er=ed.getBoundingClientRect(),ir=selImg.getBoundingClientRect();
+  resizeBox.style.left=(ir.left-er.left+ed.scrollLeft)+'px';
+  resizeBox.style.top=(ir.top-er.top+ed.scrollTop)+'px';
+  resizeBox.style.width=ir.width+'px';
+  resizeBox.style.height=ir.height+'px';
+}
+function startImgResize(e,corner){
+  e.preventDefault();e.stopPropagation();
+  const img=selImg;if(!img)return;
+  const startX=e.clientX;
+  const startW=img.getBoundingClientRect().width;
+  const dir=(corner==='ne'||corner==='se')?1:-1; // esquinas derechas agrandan hacia la derecha
+  const maxW=editor().clientWidth-36;
+  const move=ev=>{
+    let w=startW+dir*(ev.clientX-startX);
+    w=Math.max(60,Math.min(maxW,w));
+    img.style.width=Math.round(w)+'px';
+    placeResizeBox();
+  };
+  const up=()=>{
+    document.removeEventListener('pointermove',move);
+    document.removeEventListener('pointerup',up);
+    scheduleSave(0);
+  };
+  document.addEventListener('pointermove',move);
+  document.addEventListener('pointerup',up);
+}
+$('editor').addEventListener('click',e=>{
+  if(editMode&&e.target.tagName==='IMG')selectImg(e.target);
+  else if(!e.target.closest('.img-handle'))deselectImg();
+});
+$('editor').addEventListener('scroll',placeResizeBox);
+window.addEventListener('resize',placeResizeBox);
+$('editor').addEventListener('input',placeResizeBox);
+
 /* Pegar: imágenes del portapapeles se insertan; texto entra plano (sin estilos ajenos) */
 document.addEventListener('paste',e=>{
   const ed=editor();
@@ -1457,7 +1576,7 @@ const MAX_FILE=10*1024*1024; // 10 MB por archivo
 function renderFiles(){
   const box=$('filesList');box.innerHTML='';
   if(!modalFiles.length){
-    box.innerHTML=`<div class="empty-files">${editMode?'Sin documentos. Adjuntá PDFs, Excel, Word, lo que necesites (hasta 10 MB c/u).':'Sin documentos adjuntos.'}</div>`;
+    box.innerHTML=`<div class="empty-files">${editMode?'Sin documentos. Adjuntá con el botón 📎 o arrastrá los archivos acá (hasta 10 MB c/u).':'Sin documentos adjuntos.'}</div>`;
     return;
   }
   modalFiles.forEach((f,i)=>{
@@ -1480,11 +1599,8 @@ function renderFiles(){
   });
 }
 
-$('btnAddFile').addEventListener('click',()=>$('fileInput').click());
-$('btnAddCheck').addEventListener('click',addCheckItem);
-$('newCheckItem').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addCheckItem();}});
-$('fileInput').addEventListener('change',e=>{
-  [...e.target.files].forEach(f=>{
+function addAttachFiles(fileList){
+  [...fileList].forEach(f=>{
     if(f.size>MAX_FILE){toast(`"${f.name}" supera los 10 MB`);return;}
     const r=new FileReader();
     r.onload=()=>{
@@ -1493,6 +1609,33 @@ $('fileInput').addEventListener('change',e=>{
     };
     r.readAsDataURL(f);
   });
+}
+
+/* Soltar archivos directo sobre la lista de adjuntos */
+(()=>{
+  const fl=$('filesList');
+  fl.addEventListener('dragover',e=>{
+    if(!editMode)return;
+    if([...(e.dataTransfer.items||[])].some(i=>i.kind==='file')){
+      e.preventDefault();
+      fl.classList.add('drop-hover');
+    }
+  });
+  fl.addEventListener('dragleave',()=>fl.classList.remove('drop-hover'));
+  fl.addEventListener('drop',e=>{
+    fl.classList.remove('drop-hover');
+    if(!editMode)return;
+    if(!(e.dataTransfer.files||[]).length)return;
+    e.preventDefault();
+    addAttachFiles(e.dataTransfer.files);
+  });
+})();
+
+$('btnAddFile').addEventListener('click',()=>$('fileInput').click());
+$('btnAddCheck').addEventListener('click',addCheckItem);
+$('newCheckItem').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addCheckItem();}});
+$('fileInput').addEventListener('change',e=>{
+  addAttachFiles(e.target.files);
   e.target.value='';
 });
 
@@ -1546,6 +1689,7 @@ function setEditMode(on){
   updateUndoBtn();
   renderFiles();
   renderChecklist();
+  if(!on)deselectImg();
 }
 $('btnEdit').addEventListener('click',()=>{
   setEditMode(true);
@@ -1587,6 +1731,7 @@ function openModal(id){
   if(!id)setTimeout(()=>$('fTitle').focus(),60);
 }
 function closeModal(){
+  deselectImg();
   if(editMode&&saveTimer){clearTimeout(saveTimer);autoSave();} // descarga lo pendiente
   $('overlay').classList.remove('open');
   editingId=null;undoStack=[];redoStack=[];
