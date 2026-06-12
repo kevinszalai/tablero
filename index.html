@@ -125,6 +125,22 @@ main{max-width:1180px;margin:0 auto;padding:28px 20px}
 .chip[data-u="media"] .cdot{background:var(--amber)}
 .chip[data-u="baja"] .cdot{background:var(--teal)}
 .chip-clear{border-style:dashed;color:#C01D44}
+
+/* ---------- Modo enfoque (doble click en el nombre) ---------- */
+.focus-bar{
+  max-width:1180px;margin:14px auto 0;padding:0 20px;
+  display:flex;align-items:center;gap:12px;
+}
+.focus-label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft)}
+.focus-title{font-family:'Space Grotesk';font-size:17px;font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body.focus-mode .columns{grid-template-columns:1fr;max-width:760px;margin:0 auto}
+body.focus-mode main>.section{max-width:760px;margin-left:auto;margin-right:auto}
+body.focus-mode .filter-bar{display:none}
+body.focus-mode .task-subs{flex-direction:column;align-items:stretch;margin-top:12px}
+body.focus-mode .sub-pill{max-width:none;font-size:13.5px;padding:9px 13px;white-space:normal}
+body.focus-mode .sub-pill .sub-tx{white-space:normal}
+body.focus-mode .sub-pill.sub-add{text-align:center;justify-content:center}
+.subs-done-note{font-size:12px;color:var(--ink-soft);padding:4px 2px}
 .chip-clear:hover{border-color:#C01D44;color:#C01D44}
 
 /* ---------- Checklist ---------- */
@@ -516,6 +532,12 @@ main{max-width:1180px;margin:0 auto;padding:28px 20px}
 </header>
 
 <div class="filter-bar" id="filterBar"></div>
+
+<div class="focus-bar" id="focusBar" style="display:none">
+  <span class="focus-label">🔍 Viendo solo:</span>
+  <span class="focus-title" id="focusTitle"></span>
+  <button class="btn btn-primary" id="btnExitFocus">✕ Volver al tablero</button>
+</div>
 
 <main>
   <div class="columns">
@@ -1043,11 +1065,29 @@ function render(){
     eventos:'Arrastrá acá.',
     finalizadas:'Arrastrá acá.'
   };
+  // modo enfoque: validar que la tarea siga existiendo
+  if(focusedTask){
+    const ft=tasks.find(x=>x.id===focusedTask);
+    if(!ft||ft.deleted)focusedTask=null;
+  }
+  const ftarea=focusedTask?tasks.find(x=>x.id===focusedTask):null;
+  $('focusBar').style.display=focusedTask?'flex':'none';
+  if(ftarea)$('focusTitle').textContent=ftarea.title||'(sin nombre)';
+  document.body.classList.toggle('focus-mode',!!focusedTask);
+
   const vivas=alive();
   ['activas','seguimiento','eventos','finalizadas'].forEach(sec=>{
     const list=$('list-'+sec);
+    const secEl=list.closest('.section');
     list.innerHTML='';
     let items=vivas.filter(t=>t.section===sec).sort((a,b)=>a.order-b.order);
+    if(focusedTask){
+      items=items.filter(t=>t.id===focusedTask);
+      secEl.style.display=items.length?'':'none';
+      if(!items.length){$(counts[sec]).textContent=0;return;}
+    }else{
+      secEl.style.display='';
+    }
     $(counts[sec]).textContent=items.length;
     if(q) items=items.filter(t=>
       (t.title+' '+(t.area||'')+' '+(t.solicitante||'')+' '+(t.tag||'')+' '+(t.pais||'')).toLowerCase().includes(q)
@@ -1100,12 +1140,12 @@ function taskRow(t){
     <div class="task-body">
       <div class="task-top">
         <span class="task-title">${esc(t.title)||'(sin nombre)'}</span>
-        ${expandedSubs.has(t.id)?`<span class="tag-chip ${t.tag?'':'empty'}" data-tagchip>${t.tag?esc(t.tag):'+ tag'}</span>`:''}
+        ${isExpanded(t)?`<span class="tag-chip ${t.tag?'':'empty'}" data-tagchip>${t.tag?esc(t.tag):'+ tag'}</span>`:''}
       </div>
       <div class="task-meta">
         ${t.area?`<span><span class="adot" style="background:${areaColor(t.area)}"></span> <b>${esc(t.area)}</b></span>`:''}
         ${t.solicitante?`<span>👤 ${esc(t.solicitante)}</span>`:''}
-        ${(t.pais&&expandedSubs.has(t.id))?`<span>${BANDERAS[t.pais]||'🌎'} ${esc(t.pais)}</span>`:''}
+        ${(t.pais&&isExpanded(t))?`<span>${BANDERAS[t.pais]||'🌎'} ${esc(t.pais)}</span>`:''}
         ${(imgs||files)?`<span class="attach-dot">${imgs?imgs+' img':''}${imgs&&files?' · ':''}${files?files+' adj':''}</span>`:''}
       </div>
       ${(()=>{
@@ -1134,26 +1174,35 @@ function taskRow(t){
     </div>`;
   if(t.section==='finalizadas')el.classList.add('done-row');
   if(t.importante)el.classList.add('important');
-  if(expandedSubs.has(t.id))el.classList.add('subs-open');
+  if(isExpanded(t))el.classList.add('subs-open');
 
   const esZonaInteractiva=e=>e.target.closest('[data-move]')||e.target.closest('[data-done]')||e.target.closest('[data-dup]')||e.target.closest('[data-tagchip]')||e.target.closest('[data-stripe]')||e.target.closest('[data-subs]')||e.target.closest('[data-imp]')||e.target.classList.contains('tag-input');
-  // click simple: abre el detalle (con una pequeña espera para detectar doble click)
+  // click simple: despliega/colapsa los ítems de ESTA fila (las demás se colapsan)
   el.addEventListener('click',e=>{
     if(esZonaInteractiva(e))return;
     clearTimeout(el._clickT);
-    el._clickT=setTimeout(()=>openModal(t.id),260);
+    el._clickT=setTimeout(()=>{
+      if(expandedSubs.has(t.id)){
+        expandedSubs.delete(t.id);
+      }else{
+        expandedSubs.clear();
+        expandedSubs.add(t.id);
+      }
+      render();
+    },230);
   });
-  // doble click: despliega solo las subtareas de ESTA fila (las demás se colapsan)
+  // doble click en el NOMBRE: modo enfoque (solo se ve esta tarea con sus ítems)
+  // doble click en cualquier otra parte: abre el detalle
   el.addEventListener('dblclick',e=>{
-    if(esZonaInteractiva(e))return;
+    if(e.target.classList.contains('tag-input')||e.target.classList.contains('sub-input'))return;
     clearTimeout(el._clickT);
-    if(expandedSubs.has(t.id)){
-      expandedSubs.delete(t.id);
-    }else{
+    if(e.target.closest('.task-title')){
+      focusedTask=focusedTask===t.id?null:t.id;
       expandedSubs.clear();
-      expandedSubs.add(t.id);
+      render();
+      return;
     }
-    render();
+    openModal(t.id);
   });
   // Click en la franja: cicla la urgencia sin abrir el detalle
   el.querySelector('[data-stripe]').addEventListener('click',async e=>{
@@ -1227,11 +1276,14 @@ function taskRow(t){
 }
 
 const expandedSubs=new Set(); // tareas con la lista de pendientes desplegada
+let focusedTask=null;          // modo enfoque: solo se ve esta tarea
+function isExpanded(t){return expandedSubs.has(t.id)||focusedTask===t.id}
 
 function buildRowSubs(box,t){
   box.innerHTML='';
   const pend=(t.checklist||[]).filter(i=>!i.done);
-  const expanded=expandedSubs.has(t.id);
+  const enFoco=focusedTask===t.id;
+  const expanded=expandedSubs.has(t.id)||enFoco;
   const visibles=expanded?pend:pend.slice(0,3);
 
   visibles.forEach(item=>{
@@ -1282,11 +1334,20 @@ function buildRowSubs(box,t){
     more.addEventListener('click',ev=>{ev.stopPropagation();expandedSubs.add(t.id);render();});
     box.appendChild(more);
   }
-  if(expanded&&pend.length>3){
+  if(expanded&&!enFoco&&pend.length>3){
     const less=document.createElement('span');
     less.className='sub-pill more';less.textContent='ver menos';
     less.addEventListener('click',ev=>{ev.stopPropagation();expandedSubs.delete(t.id);render();});
     box.appendChild(less);
+  }
+  if(enFoco){
+    const hechas=(t.checklist||[]).filter(i=>i.done).length;
+    if(hechas){
+      const n=document.createElement('div');
+      n.className='subs-done-note';
+      n.textContent=`✓ ${hechas} subtarea${hechas>1?'s':''} ya hecha${hechas>1?'s':''}`;
+      box.appendChild(n);
+    }
   }
 
   // Agregar subtarea directo desde la fila (salvo en finalizadas)
@@ -2076,6 +2137,7 @@ document.addEventListener('keydown',e=>{
     else if($('trashOverlay').classList.contains('open'))$('trashOverlay').classList.remove('open');
     else if($('tplOverlay').classList.contains('open'))$('tplOverlay').classList.remove('open');
     else if($('overlay').classList.contains('open'))closeModal();
+    else if(focusedTask){focusedTask=null;render();}
   }
 });
 $('imgZoom').addEventListener('click',()=>$('imgZoom').classList.remove('open'));
@@ -2184,6 +2246,7 @@ $('btnReport').addEventListener('click',()=>{
 });
 
 /* ============ Header ============ */
+$('btnExitFocus').addEventListener('click',()=>{focusedTask=null;render();});
 $('btnNew').addEventListener('click',()=>openModal(null));
 $('search').addEventListener('input',render);
 
