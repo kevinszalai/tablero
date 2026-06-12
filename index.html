@@ -584,7 +584,7 @@ main{max-width:1180px;margin:0 auto;padding:28px 20px}
           <input type="date" id="fFechaSolicitud">
         </div>
         <div class="field">
-          <label>Fecha pedida de entrega</label>
+          <label id="fEntregaLabel">Fecha pedida de entrega</label>
           <input type="date" id="fFechaEntrega">
         </div>
         <div class="field field-full">
@@ -1042,7 +1042,7 @@ function taskRow(t){
       <div class="task-subs" data-subs></div>
     </div>
     <div class="task-side">
-      ${t.fechaEntrega?`<div class="due-badge ${late?'late':''}"><small>Entrega${late?' ⚠':''}</small>${fmtDate(t.fechaEntrega)}</div>`:''}
+      ${t.fechaEntrega?`<div class="due-badge ${late?'late':''}"><small>${t.section==='eventos'?'Evento':'Entrega'}${late?' ⚠':''}</small>${fmtDate(t.fechaEntrega)}</div>`:''}
       <button class="mini-btn imp-btn${t.importante?' on':''}" data-imp title="${t.importante?'Quitar importante':'Marcar importante'}">${t.importante?'★':'☆'}</button>
       ${t.section!=='finalizadas'?`<button class="mini-btn done-btn" data-done title="Marcar finalizada">✓</button>`:''}
       <button class="mini-btn" data-dup title="Duplicar tarea">⧉</button>
@@ -1513,6 +1513,11 @@ $('btnEdit').addEventListener('click',()=>{
   $('fTitle').focus();
 });
 
+function updateEntregaLabel(){
+  $('fEntregaLabel').textContent=$('fSection').value==='eventos'?'Fecha del evento':'Fecha pedida de entrega';
+}
+$('fSection').addEventListener('change',updateEntregaLabel);
+
 function fillForm(t){
   $('fTitle').value=t.title||'';
   $('fArea').value=t.area||'';
@@ -1526,6 +1531,7 @@ function fillForm(t){
   modalChecklist=JSON.parse(JSON.stringify(t.checklist||[]));
   renderChecklist();
   setUrgency(t.urgencia||'sin');
+  updateEntregaLabel();
 }
 
 function openModal(id){
