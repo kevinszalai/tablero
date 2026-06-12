@@ -232,13 +232,15 @@ main{max-width:1180px;margin:0 auto;padding:28px 20px}
 .due-badge.late{background:#FDEDF1;color:#C01D44;border-color:#F6C3D0}
 
 /* Modo lectura del modal */
-.modal.locked .field input:disabled,.modal.locked .field select:disabled{
+.modal.locked .field input,.modal.locked .field select{
   color:var(--ink);opacity:1;border-color:transparent;background:var(--bg);cursor:default;
 }
+.modal.locked .field select{pointer-events:none}
+.modal.locked .field input{caret-color:transparent}
 .modal.locked .urgency-row{pointer-events:none}
 .modal.locked .u-opt:not(.sel){opacity:.45}
 .modal.locked .rich-editor{border-color:transparent;resize:none;cursor:default}
-.modal.locked .title-input:disabled{color:var(--ink);opacity:1;cursor:default}
+.modal.locked .title-input{color:var(--ink);opacity:1;cursor:default;caret-color:transparent}
 #btnEdit{font-size:15px}
 #btnEdit:hover{background:#EAF3FB;color:var(--azul)}
 #btnUndo,#btnRedo{font-size:16px;position:relative}
@@ -967,8 +969,6 @@ function taskRow(t){
   el.dataset.id=t.id;
   const imgs=countImgs(t.descHtml);
   const files=(t.files||[]).length;
-  const ckTotal=(t.checklist||[]).length;
-  const ckDone=(t.checklist||[]).filter(i=>i.done).length;
   const late=isLate(t);
   const snippet=stripHtml(t.descHtml);
   el.innerHTML=`
@@ -983,7 +983,6 @@ function taskRow(t){
         ${t.area?`<span><span class="adot" style="background:${areaColor(t.area)}"></span> <b>${esc(t.area)}</b></span>`:''}
         ${t.solicitante?`<span>👤 ${esc(t.solicitante)}</span>`:''}
         ${(imgs||files)?`<span class="attach-dot">${imgs?imgs+' img':''}${imgs&&files?' · ':''}${files?files+' adj':''}</span>`:''}
-        ${ckTotal?`<span class="attach-dot" style="${ckDone===ckTotal?'color:var(--teal);font-weight:700':''}">☑ ${ckDone}/${ckTotal}</span>`:''}
       </div>
       ${snippet?`<div class="task-snippet">${esc(snippet)}</div>`:''}
       <div class="task-subs" data-subs></div>
@@ -1423,7 +1422,9 @@ function setEditMode(on){
   editMode=on;
   const modal=document.querySelector('.modal');
   modal.classList.toggle('locked',!on);
-  ['fTitle','fArea','fSolicitante','fFechaSolicitud','fFechaEntrega','fTag','fSection'].forEach(id=>$(id).disabled=!on);
+  // readonly (no disabled) para que el doble click siga emitiendo eventos
+  ['fTitle','fArea','fSolicitante','fFechaSolicitud','fFechaEntrega','fTag'].forEach(id=>{$(id).readOnly=!on;$(id).disabled=false;});
+  $('fSection').disabled=!on; // los select no tienen readonly
   editor().contentEditable=on?'true':'false';
   $('btnInsertImg').style.display=on?'':'none';
   $('btnAddFile').style.display=on?'':'none';
