@@ -558,7 +558,7 @@ body.focus-mode .sub-pill.sub-add{text-align:center;justify-content:center}
     <div class="brand-mark">KS</div>
     <div>
       <h1>Tablero de Tareas</h1>
-      <small>Seguimiento diario · Marketing · v3.1</small>
+      <small>Seguimiento diario · Marketing · v3.2</small>
     </div>
     <span class="sync-pill" id="syncPill" title="">● Local</span>
   </div>
@@ -2002,7 +2002,7 @@ $('btnEdit').addEventListener('click',()=>{
 
 function updateEntregaLabel(){
   const esEvento=$('fSection').value==='eventos';
-  $('fEntregaLabel').textContent=esEvento?'Fecha de inicio del evento':'Fecha pedida de entrega';
+  $('fEntregaLabel').innerHTML=esEvento?'Fecha de inicio del evento <small style="font-weight:400;text-transform:none;letter-spacing:0;color:#C01D44">(obligatoria)</small>':'Fecha pedida de entrega';
   $('fSolicitudWrap').style.display=esEvento?'none':'';
   $('fEntregasWrap').style.display=esEvento?'':'none';
   $('fEventoFinWrap').style.display=esEvento?'':'none';
