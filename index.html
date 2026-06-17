@@ -558,7 +558,7 @@ body.focus-mode .sub-pill.sub-add{text-align:center;justify-content:center}
     <div class="brand-mark">KS</div>
     <div>
       <h1>Tablero de Tareas</h1>
-      <small>Seguimiento diario · Marketing · v3.0</small>
+      <small>Seguimiento diario · Marketing · v3.1</small>
     </div>
     <span class="sync-pill" id="syncPill" title="">● Local</span>
   </div>
@@ -595,7 +595,7 @@ body.focus-mode .sub-pill.sub-add{text-align:center;justify-content:center}
 
     <section class="section">
       <div class="section-head">
-        <h2>En seguimiento</h2>
+        <h2>Merci</h2>
         <span class="count" id="countSeguimiento">0</span>
       </div>
       <div class="task-list" id="list-seguimiento" data-section="seguimiento"></div>
@@ -607,14 +607,6 @@ body.focus-mode .sub-pill.sub-add{text-align:center;justify-content:center}
         <span class="count" id="countEventos">0</span>
       </div>
       <div class="task-list" id="list-eventos" data-section="eventos"></div>
-    </section>
-
-    <section class="section">
-      <div class="section-head">
-        <h2>Merci</h2>
-        <span class="count" id="countMerci">0</span>
-      </div>
-      <div class="task-list" id="list-merci" data-section="merci"></div>
     </section>
   </div>
 
@@ -733,9 +725,8 @@ body.focus-mode .sub-pill.sub-add{text-align:center;justify-content:center}
           <label>Sección</label>
           <select id="fSection">
             <option value="activas">Activas</option>
-            <option value="seguimiento">En seguimiento</option>
+            <option value="seguimiento">Merci</option>
             <option value="eventos">Eventos y otros</option>
-            <option value="merci">Merci</option>
             <option value="finalizadas">Finalizadas</option>
           </select>
         </div>
@@ -1200,7 +1191,7 @@ function buildFilters(){
   const mkLabel=txt=>{const sp=document.createElement('span');sp.className='fgroup';sp.textContent=txt;bar.appendChild(sp);};
 
   mkLabel('Sección');
-  [['Activas','activas'],['En seguimiento','seguimiento'],['Eventos y otros','eventos'],['Merci','merci']].forEach(([l,v])=>mkChip(l,'sec',v));
+  [['Activas','activas'],['Merci','seguimiento'],['Eventos y otros','eventos']].forEach(([l,v])=>mkChip(l,'sec',v));
 
   mkLabel('Urgencia');
   [['Alta','alta'],['Media','media'],['Baja','baja']].forEach(([l,v])=>mkChip(l,'urg',v,true));
@@ -1233,12 +1224,11 @@ function buildFilters(){
 
 function render(){
   const q=$('search').value.trim().toLowerCase();
-  const counts={activas:'countActivas',seguimiento:'countSeguimiento',eventos:'countEventos',merci:'countMerci',finalizadas:'countFinalizadas'};
+  const counts={activas:'countActivas',seguimiento:'countSeguimiento',eventos:'countEventos',finalizadas:'countFinalizadas'};
   const empties={
     activas:'Sin tareas activas. Creá una con “＋ Nueva tarea”.',
     seguimiento:'Arrastrá acá.',
     eventos:'Arrastrá acá.',
-    merci:'Arrastrá acá.',
     finalizadas:'Arrastrá acá.'
   };
   // modo enfoque: validar que la tarea siga existiendo
@@ -1254,7 +1244,7 @@ function render(){
   document.body.classList.toggle('single-sec',denseInfo);
 
   const vivas=alive();
-  ['activas','seguimiento','eventos','merci','finalizadas'].forEach(sec=>{
+  ['activas','seguimiento','eventos','finalizadas'].forEach(sec=>{
     const list=$('list-'+sec);
     const secEl=list.closest('.section');
     list.innerHTML='';
@@ -1366,7 +1356,7 @@ function taskRow(t){
       <button class="mini-btn imp-btn${t.importante?' on':''}" data-imp title="${t.importante?'Quitar importante':'Marcar importante'}">${t.importante?'★':'☆'}</button>
       ${t.section!=='finalizadas'?`<button class="mini-btn done-btn" data-done title="Marcar finalizada">✓</button>`:''}
       <button class="mini-btn" data-dup title="Duplicar tarea">⧉</button>
-      <button class="mini-btn" data-move title="${t.section==='activas'?'Mover a En seguimiento':t.section==='seguimiento'?'Volver a Activas':t.section==='eventos'?'Volver a Activas':'Reactivar (vuelve a Activas)'}">${t.section==='activas'?'⤵':'⤴'}</button>
+      <button class="mini-btn" data-move title="${t.section==='activas'?'Mover a Merci':t.section==='seguimiento'?'Volver a Activas':t.section==='eventos'?'Volver a Activas':'Reactivar (vuelve a Activas)'}">${t.section==='activas'?'⤵':'⤴'}</button>
     </div>`;
   if(t.section==='finalizadas')el.classList.add('done-row');
   if(t.importante)el.classList.add('important');
@@ -1449,7 +1439,7 @@ function taskRow(t){
     setSection(t,t.section==='activas'?'seguimiento':'activas');
     t.order=maxOrder(t.section)+1;
     await persist(t);render();
-    toast(t.section==='activas'?'Movida a Activas':'Movida a En seguimiento');
+    toast(t.section==='activas'?'Movida a Activas':'Movida a Merci');
   });
   // Edición inline del tag desde la fila (solo visible con la fila desplegada)
   const tagChip=el.querySelector('[data-tagchip]');
@@ -2469,9 +2459,8 @@ $('btnReport').addEventListener('click',()=>{
     ['Métrica','Valor'],
     ['Total de tareas',data.length],
     ['Activas',data.filter(t=>t.section==='activas').length],
-    ['En seguimiento',data.filter(t=>t.section==='seguimiento').length],
+    ['Merci',data.filter(t=>t.section==='seguimiento').length],
     ['Eventos y otros',data.filter(t=>t.section==='eventos').length],
-    ['Merci',data.filter(t=>t.section==='merci').length],
     ['Finalizadas',fin.length],
     ['Vencidas (sin finalizar)',data.filter(t=>t.section!=='finalizadas'&&isLate(t)).length],
     ['Finalizadas últimos 7 días',fin.filter(t=>t.finishedAt&&t.finishedAt>=d7).length],
@@ -2524,7 +2513,7 @@ $('btnReport').addEventListener('click',()=>{
   XLSX.utils.book_append_sheet(wb,ws3,'Por semana');
 
   // --- Hoja 4: Detalle de tareas ---
-  const SEC={activas:'Activas',seguimiento:'En seguimiento',eventos:'Eventos y otros',merci:'Merci',finalizadas:'Finalizadas'};
+  const SEC={activas:'Activas',seguimiento:'Merci',eventos:'Eventos y otros',finalizadas:'Finalizadas'};
   const URG={alta:'Alta',media:'Media',baja:'Baja',sin:''};
   const detalle=[['Título','Sección','Importante','Área','Solicitante','País','Urgencia','Tag','F. solicitud','F. entrega/inicio evento','F. fin evento','F. entregas (evento)','Vencida','F. finalización','Días resolución','Checklist']];
   data.slice().sort((a,b)=>(a.section>b.section?1:-1)).forEach(t=>{
