@@ -102,6 +102,26 @@ main{max-width:1180px;margin:0 auto;padding:28px 20px}
   transition:all .15s;
 }
 .old-toggle:hover{border-color:var(--azul);color:var(--azul)}
+.done-toggle{
+  width:100%;border:1px solid var(--line);background:var(--surface);
+  border-radius:var(--radius);padding:11px 14px;cursor:pointer;font:inherit;
+  display:flex;justify-content:space-between;align-items:center;
+  font-size:13.5px;font-weight:600;color:var(--ink);
+}
+.done-toggle:hover{border-color:var(--azul)}
+.done-toggle .dt-hint{font-size:11.5px;font-weight:500;color:var(--ink-soft)}
+.done-mini{
+  display:flex;align-items:center;gap:10px;
+  background:var(--surface);border:1px solid var(--line);border-radius:9px;
+  padding:7px 11px;margin-top:6px;
+}
+.dm-check{color:var(--teal);font-weight:700;flex-shrink:0}
+.dm-title{flex:1;min-width:0;font-size:13px;color:var(--ink-soft);text-decoration:line-through;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
+.dm-title:hover{color:var(--ink)}
+.dm-date{font-size:11.5px;color:var(--ink-soft);flex-shrink:0}
+.dm-reopen{border:none;background:none;cursor:pointer;color:var(--ink-soft);font-size:14px;padding:2px 6px;border-radius:6px;flex-shrink:0}
+.dm-reopen:hover{background:var(--bg);color:var(--azul)}
 
 /* ---------- Barra de filtros ---------- */
 .filter-bar{
@@ -212,6 +232,16 @@ body.focus-mode .sub-pill.sub-add{text-align:center;justify-content:center}
 
 /* ---------- Paneles (papelera / plantillas) ---------- */
 .panel-title{font-family:'Space Grotesk';font-size:19px;font-weight:700;flex:1}
+.newtype-row{display:flex;gap:12px}
+.newtype-opt{
+  flex:1;border:1.5px solid var(--line);background:var(--bg);border-radius:13px;
+  padding:20px 12px;cursor:pointer;font:inherit;
+  display:flex;flex-direction:column;align-items:center;gap:5px;transition:all .14s;
+}
+.newtype-opt:hover{border-color:var(--azul);background:#EAF3FB;transform:translateY(-2px)}
+.newtype-opt .nt-ico{font-size:30px}
+.newtype-opt span{font-size:15px;font-weight:700;color:var(--ink)}
+.newtype-opt small{font-size:11.5px;color:var(--ink-soft)}
 .panel-note{font-size:12.5px;color:var(--ink-soft);margin-bottom:16px}
 .panel-row{
   display:flex;align-items:center;gap:11px;
@@ -222,6 +252,11 @@ body.focus-mode .sub-pill.sub-add{text-align:center;justify-content:center}
 .panel-row .pr-title{font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .panel-row .pr-sub{font-size:11.5px;color:var(--ink-soft);margin-top:2px}
 .panel-row .btn{padding:7px 12px;font-size:12.5px}
+.color-swatches{display:flex;gap:5px;flex-wrap:wrap;max-width:200px}
+.cswatch{width:22px;height:22px;border-radius:6px;border:2px solid transparent;cursor:pointer}
+.cswatch:hover{transform:scale(1.12)}
+.cswatch.on{border-color:var(--ink);box-shadow:0 0 0 2px #fff inset}
+.color-pick{width:34px;height:30px;border:1px solid var(--line);border-radius:7px;cursor:pointer;background:none;padding:2px}
 .add-check{display:flex;gap:8px;margin-top:4px}
 .add-check input{
   flex:1;border:1px solid var(--line);border-radius:10px;padding:9px 11px;
@@ -523,7 +558,7 @@ body.focus-mode .sub-pill.sub-add{text-align:center;justify-content:center}
     <div class="brand-mark">KS</div>
     <div>
       <h1>Tablero de Tareas</h1>
-      <small>Seguimiento diario · Marketing · v2.1</small>
+      <small>Seguimiento diario · Marketing · v3.0</small>
     </div>
     <span class="sync-pill" id="syncPill" title="">● Local</span>
   </div>
@@ -532,6 +567,7 @@ body.focus-mode .sub-pill.sub-add{text-align:center;justify-content:center}
     <button class="btn btn-ghost" id="btnExport" title="Descargar respaldo JSON">⬇ Respaldo</button>
     <button class="btn btn-ghost" id="btnImport" title="Restaurar desde JSON">⬆ Restaurar</button>
     <button class="btn btn-ghost" id="btnReport" title="Descargar reporte Excel con métricas">📊 Reporte</button>
+    <button class="btn btn-ghost" id="btnColors" title="Colores de áreas">🎨 Colores</button>
     <button class="btn btn-ghost" id="btnTpl" title="Crear desde plantilla">📋 Plantillas</button>
     <button class="btn btn-ghost" id="btnTrash" title="Tareas eliminadas (recuperables 30 días)">🗑 <span id="trashCount"></span></button>
     <input type="file" id="importFile" accept=".json" hidden>
@@ -571,6 +607,14 @@ body.focus-mode .sub-pill.sub-add{text-align:center;justify-content:center}
         <span class="count" id="countEventos">0</span>
       </div>
       <div class="task-list" id="list-eventos" data-section="eventos"></div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2>Merci</h2>
+        <span class="count" id="countMerci">0</span>
+      </div>
+      <div class="task-list" id="list-merci" data-section="merci"></div>
     </section>
   </div>
 
@@ -664,9 +708,13 @@ body.focus-mode .sub-pill.sub-add{text-align:center;justify-content:center}
           <label>Fecha de entregas ⚑</label>
           <input type="date" id="fFechaEntregas" title="Fecha límite para entregar las piezas del evento">
         </div>
-        <div class="field">
+        <div class="field" id="fEntregaWrap">
           <label id="fEntregaLabel">Fecha pedida de entrega</label>
           <input type="date" id="fFechaEntrega">
+        </div>
+        <div class="field" id="fEventoFinWrap" style="display:none">
+          <label>Fecha de fin <small style="font-weight:400;text-transform:none;letter-spacing:0">(vacío = un solo día)</small></label>
+          <input type="date" id="fFechaEventoFin">
         </div>
         <div class="field field-full">
           <label>Urgencia</label>
@@ -687,6 +735,7 @@ body.focus-mode .sub-pill.sub-add{text-align:center;justify-content:center}
             <option value="activas">Activas</option>
             <option value="seguimiento">En seguimiento</option>
             <option value="eventos">Eventos y otros</option>
+            <option value="merci">Merci</option>
             <option value="finalizadas">Finalizadas</option>
           </select>
         </div>
@@ -707,6 +756,34 @@ body.focus-mode .sub-pill.sub-add{text-align:center;justify-content:center}
         <div class="spacer"></div>
         <button class="btn btn-primary" id="btnDone">✓ Listo</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ¿Nueva tarea o evento? -->
+<div class="overlay" id="newTypeOverlay">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-inner">
+      <div class="modal-head"><h2 class="panel-title">Nueva tarea</h2></div>
+      <p class="panel-note">¿Qué querés crear?</p>
+      <div class="newtype-row">
+        <button class="newtype-opt" id="newTask"><span class="nt-ico">📋</span><span>Tarea</span><small>Activas</small></button>
+        <button class="newtype-opt" id="newEvent"><span class="nt-ico">📣</span><span>Evento</span><small>Eventos y otros</small></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Colores de áreas -->
+<div class="overlay" id="colorsOverlay">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-inner">
+      <div class="modal-head">
+        <h2 class="panel-title">🎨 Colores de áreas</h2>
+        <button class="close-x" data-close-colors title="Cerrar">✕</button>
+      </div>
+      <p class="panel-note">Asigná un color a cada área para distinguirlas de un vistazo. Se aplica en las tarjetas y en los filtros.</p>
+      <div id="colorsList"></div>
     </div>
   </div>
 </div>
@@ -770,10 +847,11 @@ const DB_NAME='tableroKS', STORE='tasks';
 let db;
 function openDB(){
   return new Promise((res,rej)=>{
-    const rq=indexedDB.open(DB_NAME,1);
+    const rq=indexedDB.open(DB_NAME,2);
     rq.onupgradeneeded=e=>{
       const d=e.target.result;
       if(!d.objectStoreNames.contains(STORE)) d.createObjectStore(STORE,{keyPath:'id'});
+      if(!d.objectStoreNames.contains('meta')) d.createObjectStore('meta',{keyPath:'key'});
     };
     rq.onsuccess=e=>{db=e.target.result;res()};
     rq.onerror=()=>rej(rq.error);
@@ -794,6 +872,19 @@ function dbPut(t){
 function dbDel(id){
   return new Promise((res,rej)=>{
     const rq=db.transaction(STORE,'readwrite').objectStore(STORE).delete(id);
+    rq.onsuccess=res;rq.onerror=()=>rej(rq.error);
+  });
+}
+function dbGetMeta(key){
+  return new Promise((res,rej)=>{
+    try{const rq=db.transaction('meta').objectStore('meta').get(key);
+      rq.onsuccess=()=>res(rq.result);rq.onerror=()=>rej(rq.error);
+    }catch(e){res(null);}
+  });
+}
+function dbSetMeta(key,value){
+  return new Promise((res,rej)=>{
+    const rq=db.transaction('meta','readwrite').objectStore('meta').put({key,value});
     rq.onsuccess=res;rq.onerror=()=>rej(rq.error);
   });
 }
@@ -930,6 +1021,15 @@ function fmtSize(b){
   if(b<1048576) return (b/1024).toFixed(0)+' KB';
   return (b/1048576).toFixed(1)+' MB';
 }
+function fmtRangoEvento(ini,fin){
+  // sin año; mismo mes -> "5 al 8/6"; distinto mes -> "31/5 al 3/6"
+  if(!ini)return '';
+  const [yi,mi,di]=ini.split('-');
+  if(!fin)return `${+di}/${+mi}`;
+  const [yf,mf,df]=fin.split('-');
+  if(mi===mf)return `${+di} al ${+df}/${+mf}`;
+  return `${+di}/${+mi} al ${+df}/${+mf}`;
+}
 function diasHasta(fecha){
   if(!fecha)return null;
   const hoy=new Date();hoy.setHours(0,0,0,0);
@@ -945,9 +1045,10 @@ function claveAlertaEvento(t){
   return clave;
 }
 function isLate(t){
-  if(!t.fechaEntrega) return false;
+  const ref=(t.section==='eventos'&&t.fechaEventoFin)?t.fechaEventoFin:t.fechaEntrega;
+  if(!ref) return false;
   const today=new Date();today.setHours(0,0,0,0);
-  return new Date(t.fechaEntrega+'T00:00:00')<today;
+  return new Date(ref+'T00:00:00')<today;
 }
 function esc(s){return (s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 
@@ -1001,7 +1102,23 @@ function fileIcon(mime,name){
 
 /* ============ Render del tablero ============ */
 let showOldDone=false;
+let doneOpen=false; // las finalizadas arrancan minimizadas
 const ARCHIVE_DAYS=60;
+
+function doneMiniRow(t){
+  const el=document.createElement('div');
+  el.className='done-mini';
+  const fecha=t.finishedAt?new Date(t.finishedAt).toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}):'';
+  el.innerHTML=`<span class="dm-check">✓</span><span class="dm-title">${esc(t.title)||'(sin nombre)'}</span><span class="dm-date">${fecha}</span><button class="dm-reopen" title="Reactivar (vuelve a Activas)">↩</button>`;
+  el.querySelector('.dm-title').addEventListener('click',()=>openModal(t.id));
+  el.querySelector('.dm-check').addEventListener('click',()=>openModal(t.id));
+  el.querySelector('.dm-reopen').addEventListener('click',async e=>{
+    e.stopPropagation();
+    setSection(t,'activas');t.order=maxOrder('activas')+1;
+    await persist(t);render();toast('Reactivada → Activas');
+  });
+  return el;
+}
 
 /* ============ Filtros rápidos ============ */
 const activeFilters={sec:new Set(),urg:new Set(),area:new Set(),tag:new Set(),pais:new Set()};
@@ -1020,12 +1137,36 @@ function normalizaPais(v){
   return m||v;
 }
 
-/* Color consistente por área */
-const AREA_COLORS=['#7C4DFF','#00B8A9','#F4A261','#E76F51','#2A9D8F','#9B5DE5','#00BBF9','#F15BB5','#8AC926','#FF6B9D'];
+/* Color por área: paleta amplia y bien diferenciada + colores fijos editables */
+const AREA_PALETTE=['#7C4DFF','#E8412B','#1FA64A','#F4A623','#0091D5','#D6209E','#00B3A4','#9B5DE5','#FF7A00','#5E60CE','#0EA5E9','#C026D3','#65A30D','#DB2777','#0D9488','#7C3AED','#EA580C','#2563EB','#16A34A','#BE123C'];
+let areaColorOverrides={}; // {nombreArea: '#hex'} elegidos a mano
+
+function paletteColor(name){
+  // hash con buena dispersión para que áreas distintas no caigan en el mismo color
+  let h=2166136261;
+  for(const c of name.toLowerCase().trim()){h^=c.charCodeAt(0);h=Math.imul(h,16777619)>>>0;}
+  return AREA_PALETTE[h%AREA_PALETTE.length];
+}
 function areaColor(name){
   if(!name)return '#C4CDD6';
-  let h=0;for(const c of name.toLowerCase().trim())h=(h*31+c.charCodeAt(0))>>>0;
-  return AREA_COLORS[h%AREA_COLORS.length];
+  const k=name.trim();
+  return areaColorOverrides[k]||paletteColor(k);
+}
+
+async function loadAreaColors(){
+  try{
+    const r=await dbGetMeta('areaColors');
+    if(r&&r.value)areaColorOverrides=r.value;
+  }catch(e){}
+  if(remote){
+    remote.parent.collection('config').doc('areaColors').get()
+      .then(d=>{if(d.exists){areaColorOverrides={...areaColorOverrides,...(d.data()||{})};render();}})
+      .catch(()=>{});
+  }
+}
+async function saveAreaColors(){
+  try{await dbSetMeta('areaColors',areaColorOverrides);}catch(e){}
+  if(remote){remote.parent.collection('config').doc('areaColors').set(areaColorOverrides).catch(()=>{});}
 }
 
 function matchesFilters(t){
@@ -1059,7 +1200,7 @@ function buildFilters(){
   const mkLabel=txt=>{const sp=document.createElement('span');sp.className='fgroup';sp.textContent=txt;bar.appendChild(sp);};
 
   mkLabel('Sección');
-  [['Activas','activas'],['En seguimiento','seguimiento'],['Eventos y otros','eventos']].forEach(([l,v])=>mkChip(l,'sec',v));
+  [['Activas','activas'],['En seguimiento','seguimiento'],['Eventos y otros','eventos'],['Merci','merci']].forEach(([l,v])=>mkChip(l,'sec',v));
 
   mkLabel('Urgencia');
   [['Alta','alta'],['Media','media'],['Baja','baja']].forEach(([l,v])=>mkChip(l,'urg',v,true));
@@ -1092,11 +1233,12 @@ function buildFilters(){
 
 function render(){
   const q=$('search').value.trim().toLowerCase();
-  const counts={activas:'countActivas',seguimiento:'countSeguimiento',eventos:'countEventos',finalizadas:'countFinalizadas'};
+  const counts={activas:'countActivas',seguimiento:'countSeguimiento',eventos:'countEventos',merci:'countMerci',finalizadas:'countFinalizadas'};
   const empties={
     activas:'Sin tareas activas. Creá una con “＋ Nueva tarea”.',
     seguimiento:'Arrastrá acá.',
     eventos:'Arrastrá acá.',
+    merci:'Arrastrá acá.',
     finalizadas:'Arrastrá acá.'
   };
   // modo enfoque: validar que la tarea siga existiendo
@@ -1112,7 +1254,7 @@ function render(){
   document.body.classList.toggle('single-sec',denseInfo);
 
   const vivas=alive();
-  ['activas','seguimiento','eventos','finalizadas'].forEach(sec=>{
+  ['activas','seguimiento','eventos','merci','finalizadas'].forEach(sec=>{
     const list=$('list-'+sec);
     const secEl=list.closest('.section');
     list.innerHTML='';
@@ -1146,23 +1288,26 @@ function render(){
       return;
     }
     if(sec==='finalizadas'){
-      // Las finalizadas hace más de 60 días se colapsan en "Ver anteriores"
+      if(!items.length){list.innerHTML=`<div class="empty-msg">${(q||hasActiveFilters())?'Sin resultados acá.':'Nada finalizado todavía.'}</div>`;return;}
+      // Encabezado plegable: por defecto minimizadas
+      const head=document.createElement('button');
+      head.className='done-toggle';
+      head.innerHTML=`<span>${doneOpen?'▾':'▸'} ${items.length} finalizada${items.length>1?'s':''}</span><span class="dt-hint">${doneOpen?'tocá para minimizar':'tocá para ver'}</span>`;
+      head.addEventListener('click',()=>{doneOpen=!doneOpen;render();});
+      list.appendChild(head);
+      if(!doneOpen)return;
+      // desplegadas: las recientes como filas compactas; las viejas (>60d) bajo "Ver anteriores"
       const cutoff=Date.now()-ARCHIVE_DAYS*24*3600*1000;
       const recientes=items.filter(t=>!t.finishedAt||t.finishedAt>=cutoff);
       const viejas=items.filter(t=>t.finishedAt&&t.finishedAt<cutoff);
-      recientes.forEach(t=>list.appendChild(taskRow(t)));
+      recientes.forEach(t=>list.appendChild(doneMiniRow(t)));
       if(viejas.length){
         const btn=document.createElement('button');
         btn.className='old-toggle';
-        btn.textContent=showOldDone
-          ?`Ocultar anteriores (${viejas.length})`
-          :`Ver anteriores (${viejas.length}) · finalizadas hace más de ${ARCHIVE_DAYS} días`;
+        btn.textContent=showOldDone?`Ocultar anteriores (${viejas.length})`:`Ver anteriores (${viejas.length}) · más de ${ARCHIVE_DAYS} días`;
         btn.addEventListener('click',()=>{showOldDone=!showOldDone;render();});
         list.appendChild(btn);
-        if(showOldDone)viejas.forEach(t=>list.appendChild(taskRow(t)));
-      }
-      if(!recientes.length&&!viejas.length){
-        list.innerHTML=`<div class="empty-msg">${empties[sec]}</div>`;
+        if(showOldDone)viejas.forEach(t=>list.appendChild(doneMiniRow(t)));
       }
       return;
     }
@@ -1215,7 +1360,9 @@ function taskRow(t){
         const cerca=dE!==null&&dE>=0&&dE<=7;
         return `<div class="due-badge entregas ${lateE||cerca?'late':''}"><small>Entregas${lateE?' ⚠':cerca?' ⏰':''}</small>${fmtDate(t.fechaEntregas)}</div>`;
       })():''}
-      ${t.fechaEntrega?`<div class="due-badge ${late?'late':''}"><small>${t.section==='eventos'?'Evento':'Entrega'}${late?' ⚠':''}</small>${fmtDate(t.fechaEntrega)}</div>`:''}
+      ${t.fechaEntrega?(t.section==='eventos'
+        ?`<div class="due-badge ${late?'late':''}"><small>Evento${late?' ⚠':''}</small>${fmtRangoEvento(t.fechaEntrega,t.fechaEventoFin)}</div>`
+        :`<div class="due-badge ${late?'late':''}"><small>Entrega${late?' ⚠':''}</small>${fmtDate(t.fechaEntrega)}</div>`):''}
       <button class="mini-btn imp-btn${t.importante?' on':''}" data-imp title="${t.importante?'Quitar importante':'Marcar importante'}">${t.importante?'★':'☆'}</button>
       ${t.section!=='finalizadas'?`<button class="mini-btn done-btn" data-done title="Marcar finalizada">✓</button>`:''}
       <button class="mini-btn" data-dup title="Duplicar tarea">⧉</button>
@@ -1467,6 +1614,11 @@ function initSortable(){
       delay:120,
       delayOnTouchOnly:true,
       ghostClass:'dragging',
+      scroll:true,
+      scrollSensitivity:90,   // a 90px del borde empieza a desplazar
+      scrollSpeed:18,
+      bubbleScroll:true,
+      forceAutoScrollFallback:true, // fuerza el auto-scroll de la página (window)
       onEnd:async evt=>{
         const conts=new Set([evt.from,evt.to]);
         const changed=[];
@@ -1835,7 +1987,7 @@ function setEditMode(on){
   const modal=document.querySelector('.modal');
   modal.classList.toggle('locked',!on);
   // readonly (no disabled) para que el doble click siga emitiendo eventos
-  ['fTitle','fArea','fSolicitante','fPais','fFechaSolicitud','fFechaEntrega','fFechaEntregas','fTag'].forEach(id=>{$(id).readOnly=!on;$(id).disabled=false;});
+  ['fTitle','fArea','fSolicitante','fPais','fFechaSolicitud','fFechaEntrega','fFechaEntregas','fFechaEventoFin','fTag'].forEach(id=>{$(id).readOnly=!on;$(id).disabled=false;});
   $('fSection').disabled=!on; // los select no tienen readonly
   editor().contentEditable=on?'true':'false';
   $('btnInsertImg').style.display=on?'':'none';
@@ -1860,10 +2012,10 @@ $('btnEdit').addEventListener('click',()=>{
 
 function updateEntregaLabel(){
   const esEvento=$('fSection').value==='eventos';
-  $('fEntregaLabel').textContent=esEvento?'Fecha del evento':'Fecha pedida de entrega';
-  // en eventos, "Fecha de solicitud" se transforma en "Fecha de entregas"
+  $('fEntregaLabel').textContent=esEvento?'Fecha de inicio del evento':'Fecha pedida de entrega';
   $('fSolicitudWrap').style.display=esEvento?'none':'';
   $('fEntregasWrap').style.display=esEvento?'':'none';
+  $('fEventoFinWrap').style.display=esEvento?'':'none';
 }
 $('fSection').addEventListener('change',updateEntregaLabel);
 
@@ -1886,6 +2038,7 @@ function fillForm(t){
   $('fFechaSolicitud').value=t.fechaSolicitud||'';
   $('fFechaEntregas').value=t.fechaEntregas||'';
   $('fFechaEntrega').value=t.fechaEntrega||'';
+  $('fFechaEventoFin').value=t.fechaEventoFin||'';
   $('fTag').value=t.tag||'';
   $('fSection').value=t.section||'activas';
   editor().innerHTML=sanitize(t.descHtml||'');
@@ -1896,13 +2049,13 @@ function fillForm(t){
   updateEntregaLabel();
 }
 
-function openModal(id){
+function openModal(id,initialSection){
   editingId=id;
   undoStack=[];redoStack=[];
   let t;
   if(id){t=tasks.find(x=>x.id===id);}
   else{
-    t={title:'',area:'',solicitante:'',fechaSolicitud:new Date().toISOString().slice(0,10),fechaEntrega:'',urgencia:'sin',tag:'',section:'activas',descHtml:'',files:[],checklist:[]};
+    t={title:'',area:'',solicitante:'',fechaSolicitud:new Date().toISOString().slice(0,10),fechaEntrega:'',urgencia:'sin',tag:'',section:initialSection||'activas',descHtml:'',files:[],checklist:[]};
   }
   fillForm(t);
   setEditMode(!id); // existente: abre bloqueada en modo lectura; nueva: editable
@@ -1960,7 +2113,7 @@ async function autoSave(){
     area:$('fArea').value.trim(),solicitante:$('fSolicitante').value.trim(),
     pais:normalizaPais($('fPais').value),
     fechaSolicitud:$('fFechaSolicitud').value,fechaEntrega:$('fFechaEntrega').value,
-    fechaEntregas:$('fFechaEntregas').value,
+    fechaEntregas:$('fFechaEntregas').value,fechaEventoFin:$('fFechaEventoFin').value,
     urgencia:modalUrgency,tag:$('fTag').value.trim(),
     descHtml:sanitize(editor().innerHTML),files:modalFiles,
     checklist:JSON.parse(JSON.stringify(modalChecklist)),
@@ -1985,7 +2138,7 @@ async function autoSave(){
 
 /* Cualquier cambio dispara el autoguardado */
 ['fTitle','fArea','fSolicitante','fPais','fTag'].forEach(id=>$(id).addEventListener('input',()=>scheduleSave()));
-['fFechaSolicitud','fFechaEntrega','fFechaEntregas','fSection'].forEach(id=>$(id).addEventListener('change',()=>scheduleSave(0)));
+['fFechaSolicitud','fFechaEntrega','fFechaEntregas','fFechaEventoFin','fSection'].forEach(id=>$(id).addEventListener('change',()=>scheduleSave(0)));
 $('editor').addEventListener('input',()=>scheduleSave());
 
 /* Deshacer: vuelve un paso atrás en el historial (hasta 50) */
@@ -2184,6 +2337,42 @@ function renderTpls(){
     box.appendChild(row);
   });
 }
+function renderColors(){
+  const box=$('colorsList');box.innerHTML='';
+  const areas=[...new Set(tasks.filter(t=>!t.deleted).map(t=>(t.area||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  if(!areas.length){
+    box.innerHTML='<div class="empty-msg">Todavía no cargaste áreas en tus tareas.</div>';
+    return;
+  }
+  areas.forEach(a=>{
+    const row=document.createElement('div');row.className='panel-row';
+    const actual=areaColor(a);
+    row.innerHTML=`
+      <span class="adot" style="width:16px;height:16px;background:${actual}"></span>
+      <div class="pr-main"><div class="pr-title">${esc(a)}</div></div>
+      <div class="color-swatches"></div>
+      <input type="color" value="${actual}" class="color-pick" title="Color personalizado">`;
+    const sw=row.querySelector('.color-swatches');
+    AREA_PALETTE.slice(0,10).forEach(col=>{
+      const b=document.createElement('button');
+      b.className='cswatch'+(col.toLowerCase()===actual.toLowerCase()?' on':'');
+      b.style.background=col;
+      b.addEventListener('click',async()=>{
+        areaColorOverrides[a]=col;await saveAreaColors();renderColors();render();
+      });
+      sw.appendChild(b);
+    });
+    row.querySelector('.color-pick').addEventListener('input',async e=>{
+      areaColorOverrides[a]=e.target.value;await saveAreaColors();
+      row.querySelector('.adot').style.background=e.target.value;render();
+    });
+    box.appendChild(row);
+  });
+}
+$('btnColors').addEventListener('click',()=>{renderColors();$('colorsOverlay').classList.add('open');});
+document.querySelector('[data-close-colors]').addEventListener('click',()=>$('colorsOverlay').classList.remove('open'));
+$('colorsOverlay').addEventListener('click',e=>{if(e.target===$('colorsOverlay'))$('colorsOverlay').classList.remove('open');});
+
 $('btnTpl').addEventListener('click',()=>{renderTpls();$('tplOverlay').classList.add('open');});
 document.querySelector('[data-close-tpl]').addEventListener('click',()=>$('tplOverlay').classList.remove('open'));
 $('tplOverlay').addEventListener('click',e=>{if(e.target===$('tplOverlay'))$('tplOverlay').classList.remove('open');});
@@ -2215,7 +2404,8 @@ $('btnCopy').addEventListener('click',async()=>{
   const fechas=[];
   if(!esEvento&&$('fFechaSolicitud').value)fechas.push('Solicitada: '+fmtDate($('fFechaSolicitud').value));
   if(esEvento&&$('fFechaEntregas').value)fechas.push('Entregas: '+fmtDate($('fFechaEntregas').value));
-  if($('fFechaEntrega').value)fechas.push((esEvento?'Evento: ':'Entrega: ')+fmtDate($('fFechaEntrega').value));
+  if(esEvento&&$('fFechaEntrega').value)fechas.push('Evento: '+($('fFechaEventoFin').value?fmtDate($('fFechaEntrega').value)+' al '+fmtDate($('fFechaEventoFin').value):fmtDate($('fFechaEntrega').value)));
+  if(!esEvento&&$('fFechaEntrega').value)fechas.push('Entrega: '+fmtDate($('fFechaEntrega').value));
   if(fechas.length)L.push(fechas.join(' · '));
   const extras=[];
   if(URG[modalUrgency])extras.push('Urgencia: '+URG[modalUrgency]);
@@ -2245,6 +2435,8 @@ $('overlay').addEventListener('click',e=>{if(e.target===$('overlay'))closeModal(
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){
     if($('imgZoom').classList.contains('open'))$('imgZoom').classList.remove('open');
+    else if($('newTypeOverlay').classList.contains('open'))$('newTypeOverlay').classList.remove('open');
+    else if($('colorsOverlay').classList.contains('open'))$('colorsOverlay').classList.remove('open');
     else if($('trashOverlay').classList.contains('open'))$('trashOverlay').classList.remove('open');
     else if($('tplOverlay').classList.contains('open'))$('tplOverlay').classList.remove('open');
     else if($('overlay').classList.contains('open'))closeModal();
@@ -2279,6 +2471,7 @@ $('btnReport').addEventListener('click',()=>{
     ['Activas',data.filter(t=>t.section==='activas').length],
     ['En seguimiento',data.filter(t=>t.section==='seguimiento').length],
     ['Eventos y otros',data.filter(t=>t.section==='eventos').length],
+    ['Merci',data.filter(t=>t.section==='merci').length],
     ['Finalizadas',fin.length],
     ['Vencidas (sin finalizar)',data.filter(t=>t.section!=='finalizadas'&&isLate(t)).length],
     ['Finalizadas últimos 7 días',fin.filter(t=>t.finishedAt&&t.finishedAt>=d7).length],
@@ -2331,9 +2524,9 @@ $('btnReport').addEventListener('click',()=>{
   XLSX.utils.book_append_sheet(wb,ws3,'Por semana');
 
   // --- Hoja 4: Detalle de tareas ---
-  const SEC={activas:'Activas',seguimiento:'En seguimiento',eventos:'Eventos y otros',finalizadas:'Finalizadas'};
+  const SEC={activas:'Activas',seguimiento:'En seguimiento',eventos:'Eventos y otros',merci:'Merci',finalizadas:'Finalizadas'};
   const URG={alta:'Alta',media:'Media',baja:'Baja',sin:''};
-  const detalle=[['Título','Sección','Importante','Área','Solicitante','País','Urgencia','Tag','F. solicitud','F. entrega/evento','F. entregas (evento)','Vencida','F. finalización','Días resolución','Checklist']];
+  const detalle=[['Título','Sección','Importante','Área','Solicitante','País','Urgencia','Tag','F. solicitud','F. entrega/inicio evento','F. fin evento','F. entregas (evento)','Vencida','F. finalización','Días resolución','Checklist']];
   data.slice().sort((a,b)=>(a.section>b.section?1:-1)).forEach(t=>{
     const ck=(t.checklist||[]);
     detalle.push([
@@ -2341,6 +2534,7 @@ $('btnReport').addEventListener('click',()=>{
       URG[t.urgencia]||'',t.tag||'',
       t.fechaSolicitud?fmtDate(t.fechaSolicitud):'',
       t.fechaEntrega?fmtDate(t.fechaEntrega):'',
+      t.fechaEventoFin?fmtDate(t.fechaEventoFin):'',
       t.fechaEntregas?fmtDate(t.fechaEntregas):'',
       (t.section!=='finalizadas'&&isLate(t))?'SÍ':'',
       t.finishedAt?new Date(t.finishedAt).toLocaleDateString('es-AR'):'',
@@ -2349,7 +2543,7 @@ $('btnReport').addEventListener('click',()=>{
     ]);
   });
   const ws4=XLSX.utils.aoa_to_sheet(detalle);
-  ws4['!cols']=[{wch:38},{wch:15},{wch:5},{wch:16},{wch:16},{wch:14},{wch:9},{wch:12},{wch:12},{wch:14},{wch:14},{wch:8},{wch:14},{wch:13},{wch:9}];
+  ws4['!cols']=[{wch:38},{wch:15},{wch:5},{wch:16},{wch:16},{wch:14},{wch:9},{wch:12},{wch:12},{wch:16},{wch:13},{wch:14},{wch:8},{wch:14},{wch:13},{wch:9}];
   XLSX.utils.book_append_sheet(wb,ws4,'Tareas');
 
   XLSX.writeFile(wb,'reporte-tablero-'+hoy.toISOString().slice(0,10)+'.xlsx');
@@ -2358,7 +2552,10 @@ $('btnReport').addEventListener('click',()=>{
 
 /* ============ Header ============ */
 $('btnExitFocus').addEventListener('click',()=>{focusedTask=null;render();});
-$('btnNew').addEventListener('click',()=>openModal(null));
+$('btnNew').addEventListener('click',()=>$('newTypeOverlay').classList.add('open'));
+$('newTask').addEventListener('click',()=>{$('newTypeOverlay').classList.remove('open');openModal(null,'activas');});
+$('newEvent').addEventListener('click',()=>{$('newTypeOverlay').classList.remove('open');openModal(null,'eventos');});
+$('newTypeOverlay').addEventListener('click',e=>{if(e.target===$('newTypeOverlay'))$('newTypeOverlay').classList.remove('open');});
 $('search').addEventListener('input',render);
 
 $('btnExport').addEventListener('click',()=>{
@@ -2419,6 +2616,7 @@ if('serviceWorker' in navigator){
   tasks=await dbAll();
   await migrate();
   await purgeTrash();
+  await loadAreaColors();
   render();
   initSortable();
   startSync();
