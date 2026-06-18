@@ -664,7 +664,7 @@ body.focus-mode .sub-pill.sub-add{text-align:center;justify-content:center}
     <div class="brand-mark">KS</div>
     <div>
       <h1>Tablero de Tareas</h1>
-      <small>Seguimiento diario · Marketing · v3.8</small>
+      <small>Seguimiento diario · Marketing · v4.2</small>
     </div>
     <span class="sync-pill" id="syncPill" title="">● Local</span>
   </div>
@@ -1167,7 +1167,7 @@ function claveAlertaEvento(t){
   if(t.section!=='eventos')return null;
   let clave=null;
   const dEnt=diasHasta(t.fechaEntregas);
-  if(dEnt!==null&&dEnt<=7)clave=dEnt; // entregas cerca o vencida: máxima urgencia
+  if(dEnt!==null&&dEnt<=24)clave=dEnt; // entregas dentro de 24 días o vencidas: máxima urgencia
   const dEv=diasHasta(t.fechaEntrega);
   if(dEv!==null&&dEv>=0&&dEv<=45)clave=clave===null?dEv:Math.min(clave,dEv);
   return clave;
@@ -1602,12 +1602,27 @@ function taskRow(t){
         ${(imgs||files)?`<span class="attach-dot">${imgs?imgs+' img':''}${imgs&&files?' · ':''}${files?files+' adj':''}</span>`:''}
       </div>
       ${(()=>{
-        if(t.section!=='eventos'||!t.fechaEntrega)return '';
-        const d=diasHasta(t.fechaEntrega);
-        if(d===null||d<0||d>45)return '';
-        const hot=d<=14;
-        const txt=d===0?'¡El evento es HOY!':d===1?'El evento es mañana':`Faltan ${d} días para el evento`;
-        return `<div class="event-alert ${hot?'hot':''}">📣 ${txt}</div>`;
+        if(t.section!=='eventos')return '';
+        let out='';
+        // Alerta 1: fecha de ENTREGAS (límite de piezas) — desde 24 días, rojo a 15
+        if(t.fechaEntregas){
+          const de=diasHasta(t.fechaEntregas);
+          if(de!==null&&de<=24){
+            const hot=de<=15;
+            const txt=de<0?`Entregas vencidas hace ${-de} día${-de===1?'':'s'}`:de===0?'¡Entregas son HOY!':de===1?'Entregas son mañana':`Faltan ${de} días para las entregas`;
+            out+=`<div class="event-alert ${hot||de<0?'hot':''}">📦 ${txt}</div>`;
+          }
+        }
+        // Alerta 2: fecha del EVENTO — desde 45 días, rojo a 14
+        if(t.fechaEntrega){
+          const d=diasHasta(t.fechaEntrega);
+          if(d!==null&&d>=0&&d<=45){
+            const hot=d<=20;
+            const txt=d===0?'¡El evento es HOY!':d===1?'El evento es mañana':`Faltan ${d} días para el evento`;
+            out+=`<div class="event-alert ${hot?'hot':''}">📣 ${txt}</div>`;
+          }
+        }
+        return out;
       })()}
       ${focusedTask===t.id
         ? (t.descHtml&&stripHtml(t.descHtml)?`<div class="task-fulldesc">${sanitize(t.descHtml)}</div>`:'')
