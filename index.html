@@ -169,6 +169,29 @@ main{max-width:1180px;margin:0 auto;padding:28px 20px}
 .backup-reminder .btn{padding:8px 14px;font-size:13px}
 .backup-x{border:none;background:none;cursor:pointer;color:#8A6400;font-size:15px;padding:4px 7px;border-radius:7px}
 .backup-x:hover{background:#F0DDA0}
+/* ---------- Notas para calls ---------- */
+#notesView{max-width:1180px;margin:0 auto;padding:24px 20px}
+.notes-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:22px}
+.notes-h2{font-family:'Space Grotesk';font-size:20px;font-weight:700;flex:1}
+.notes-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.note-card{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:16px 17px;cursor:pointer;position:relative;
+  min-height:120px;display:flex;flex-direction:column;transition:transform .12s,box-shadow .15s;
+  border-top:3px solid var(--teal);
+}
+.note-card:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(22,33,46,.12)}
+.note-card h3{font-family:'Space Grotesk';font-size:15.5px;font-weight:700;margin-bottom:7px;overflow-wrap:anywhere}
+.note-card .note-preview{font-size:13px;color:var(--ink-soft);line-height:1.5;flex:1;
+  display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.note-card .note-date{font-size:11px;color:var(--ink-soft);margin-top:10px}
+.note-card .note-del{position:absolute;top:10px;right:10px;border:none;background:none;cursor:pointer;
+  color:#C8D1DA;font-size:14px;padding:3px 6px;border-radius:6px;opacity:0;transition:opacity .12s}
+.note-card:hover .note-del{opacity:1}
+.note-card .note-del:hover{color:#C01D44;background:#FDEDF1}
+.notes-empty{grid-column:1/-1;border:1.5px dashed var(--line);border-radius:var(--radius);
+  padding:40px;text-align:center;color:var(--ink-soft);font-size:14px}
+
 .summary-bar{
   max-width:1180px;margin:14px auto 0;padding:11px 16px;
   display:flex;gap:9px;flex-wrap:wrap;align-items:center;
@@ -686,12 +709,13 @@ body.focus-mode .sub-pill.sub-add{text-align:center;justify-content:center}
     <div class="brand-mark">KS</div>
     <div>
       <h1>Tablero de Tareas</h1>
-      <small>Seguimiento diario · Marketing · v4.5</small>
+      <small>Seguimiento diario · Marketing · v4.7</small>
     </div>
     <span class="sync-pill" id="syncPill" title="">● Local</span>
   </div>
   <div class="header-actions">
     <input type="text" class="search" id="search" placeholder="Buscar tarea…">
+    <button class="btn btn-ghost" id="btnNotes">🗒️ Notas para calls</button>
     <button class="btn btn-primary" id="btnNew">＋ Nueva tarea</button>
     <div class="menu-wrap">
       <button class="btn btn-ghost menu-btn" id="btnMenu" title="Menú" aria-haspopup="true" aria-expanded="false">
@@ -725,6 +749,62 @@ body.focus-mode .sub-pill.sub-add{text-align:center;justify-content:center}
   <span class="focus-label">🔍 Viendo solo:</span>
   <span class="focus-title" id="focusTitle"></span>
   <button class="btn btn-primary" id="btnExitFocus">✕ Volver al tablero</button>
+</div>
+
+<!-- Vista: Notas para calls -->
+<div id="notesView" style="display:none">
+  <div class="notes-head">
+    <button class="btn btn-ghost" id="notesBack">‹ Volver al tablero</button>
+    <h2 class="notes-h2">🗒️ Notas para calls</h2>
+    <input type="text" class="search" id="notesSearch" placeholder="Buscar nota…">
+    <button class="btn btn-primary" id="notesNew">＋ Nueva nota</button>
+  </div>
+  <div class="notes-grid" id="notesGrid"></div>
+</div>
+
+<!-- Editor de nota -->
+<div class="overlay" id="noteOverlay">
+  <div class="modal" style="max-width:720px">
+    <div class="modal-stripe" style="background:var(--teal)"></div>
+    <div class="modal-inner">
+      <div class="modal-head">
+        <input type="text" class="title-input" id="noteTitle" placeholder="Título de la nota">
+        <button class="close-x" id="noteUndo" title="Deshacer">↩<span class="undo-count" id="noteUndoCount"></span></button>
+        <button class="close-x" id="noteClose" title="Cerrar y guardar">✕</button>
+      </div>
+      <div class="block-head" style="margin-top:2px">
+        Notas <span class="save-status" id="noteSaved" style="position:static;opacity:0">Guardado ✓</span>
+      </div>
+      <div class="editor-toolbar">
+        <button class="fmt-btn" type="button" data-ncmd="bold" title="Negrita"><b>B</b></button>
+        <button class="fmt-btn" type="button" data-ncmd="insertUnorderedList" title="Lista">•≡</button>
+        <button class="fmt-btn" type="button" data-ncmd="insertOrderedList" title="Lista numerada">1≡</button>
+        <span class="fmt-sep"></span>
+        <span class="fmt-label">Resaltar</span>
+        <button class="fmt-btn sw" type="button" data-nhl="#FFF1A8" style="background:#FFF1A8"></button>
+        <button class="fmt-btn sw" type="button" data-nhl="#C9F2D0" style="background:#C9F2D0"></button>
+        <button class="fmt-btn sw" type="button" data-nhl="#CDEFFA" style="background:#CDEFFA"></button>
+        <button class="fmt-btn sw" type="button" data-nhl="#FFD6E0" style="background:#FFD6E0"></button>
+        <span class="fmt-sep"></span>
+        <span class="fmt-label">Color</span>
+        <button class="fmt-btn sw" type="button" data-nfc="#C01D44" style="background:#C01D44"></button>
+        <button class="fmt-btn sw" type="button" data-nfc="#00528F" style="background:#00528F"></button>
+        <button class="fmt-btn sw" type="button" data-nfc="#008091" style="background:#008091"></button>
+        <button class="fmt-btn sw" type="button" data-nfc="#D9A400" style="background:#D9A400"></button>
+        <span class="fmt-sep"></span>
+        <button class="fmt-btn" type="button" data-ncmd="removeFormat" title="Quitar formato">✕</button>
+        <span class="fmt-sep"></span>
+        <button class="fmt-btn" type="button" id="noteInsertImg" title="Insertar imagen">🖼</button>
+      </div>
+      <input type="file" id="noteImgInput" accept="image/*" hidden>
+      <div class="rich-editor" id="noteEditor" contenteditable="true" style="height:340px" data-placeholder="Escribí tus notas de la call acá… Podés usar negritas, colores, resaltado y listas."></div>
+      <div class="modal-foot" style="margin-top:18px">
+        <button class="btn btn-danger" id="noteDelete">Eliminar nota</button>
+        <div class="spacer"></div>
+        <button class="btn btn-primary" id="noteDone">✓ Listo</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <main>
@@ -1020,11 +1100,12 @@ const DB_NAME='tableroKS', STORE='tasks';
 let db;
 function openDB(){
   return new Promise((res,rej)=>{
-    const rq=indexedDB.open(DB_NAME,2);
+    const rq=indexedDB.open(DB_NAME,3);
     rq.onupgradeneeded=e=>{
       const d=e.target.result;
       if(!d.objectStoreNames.contains(STORE)) d.createObjectStore(STORE,{keyPath:'id'});
       if(!d.objectStoreNames.contains('meta')) d.createObjectStore('meta',{keyPath:'key'});
+      if(!d.objectStoreNames.contains('notes')) d.createObjectStore('notes',{keyPath:'id'});
     };
     rq.onsuccess=e=>{db=e.target.result;res()};
     rq.onerror=()=>rej(rq.error);
@@ -1058,6 +1139,25 @@ function dbGetMeta(key){
 function dbSetMeta(key,value){
   return new Promise((res,rej)=>{
     const rq=db.transaction('meta','readwrite').objectStore('meta').put({key,value});
+    rq.onsuccess=res;rq.onerror=()=>rej(rq.error);
+  });
+}
+function dbNotesAll(){
+  return new Promise((res,rej)=>{
+    try{const rq=db.transaction('notes').objectStore('notes').getAll();
+      rq.onsuccess=()=>res(rq.result);rq.onerror=()=>rej(rq.error);
+    }catch(e){res([]);}
+  });
+}
+function dbNotePut(n){
+  return new Promise((res,rej)=>{
+    const rq=db.transaction('notes','readwrite').objectStore('notes').put(n);
+    rq.onsuccess=res;rq.onerror=()=>rej(rq.error);
+  });
+}
+function dbNoteDel(id){
+  return new Promise((res,rej)=>{
+    const rq=db.transaction('notes','readwrite').objectStore('notes').delete(id);
     rq.onsuccess=res;rq.onerror=()=>rej(rq.error);
   });
 }
@@ -2058,8 +2158,15 @@ function compressImage(file,cb){
   reader.readAsDataURL(file);
 }
 
+function activeEd(){
+  return $('noteOverlay').classList.contains('open')?noteEd():editor();
+}
+function scheduleSaveActive(d){
+  if($('noteOverlay').classList.contains('open'))scheduleNoteSave(d);
+  else scheduleSave(d);
+}
 function insertImageAtCaret(dataURL){
-  const ed=editor();
+  const ed=activeEd();
   ed.focus();
   const sel=window.getSelection();
   let range=null;
@@ -2077,7 +2184,7 @@ function insertImageAtCaret(dataURL){
   }else{
     ed.appendChild(img);ed.appendChild(document.createElement('br'));
   }
-  scheduleSave(0);
+  scheduleSaveActive(0);
 }
 
 /* Botones de formato: mousedown prevenido para no perder la selección */
@@ -2139,6 +2246,29 @@ $('editorImgInput').addEventListener('change',e=>{
   }));
 })();
 
+/* Arrastrar imágenes al editor de NOTAS */
+(()=>{
+  const ed=document.getElementById('noteEditor');
+  ed.addEventListener('dragover',e=>{
+    if([...(e.dataTransfer.items||[])].some(i=>i.kind==='file')){e.preventDefault();ed.classList.add('drop-hover');}
+  });
+  ed.addEventListener('dragleave',()=>ed.classList.remove('drop-hover'));
+  ed.addEventListener('drop',e=>{
+    ed.classList.remove('drop-hover');
+    const files=[...(e.dataTransfer.files||[])].filter(f=>f.type.startsWith('image/'));
+    if(!files.length)return;
+    e.preventDefault();
+    let range=null;
+    if(document.caretRangeFromPoint)range=document.caretRangeFromPoint(e.clientX,e.clientY);
+    else if(document.caretPositionFromPoint){const pos=document.caretPositionFromPoint(e.clientX,e.clientY);if(pos){range=document.createRange();range.setStart(pos.offsetNode,pos.offset);range.collapse(true);}}
+    if(range&&ed.contains(range.startContainer)){const sel=window.getSelection();sel.removeAllRanges();sel.addRange(range);}
+    files.forEach(f=>compressImage(f,url=>insertImageAtCaret(url)));
+  });
+  ['dragover','drop'].forEach(ev=>document.addEventListener(ev,e=>{
+    if($('noteOverlay').classList.contains('open')&&!ed.contains(e.target))e.preventDefault();
+  }));
+})();
+
 /* ============ Redimensionar imágenes del editor (manijas en las esquinas) ============ */
 let selImg=null,resizeBox=null;
 function deselectImg(){
@@ -2156,12 +2286,12 @@ function selectImg(img){
     h.addEventListener('pointerdown',e=>startImgResize(e,c));
     resizeBox.appendChild(h);
   });
-  editor().appendChild(resizeBox);
+  (img.closest('.rich-editor')||editor()).appendChild(resizeBox);
   placeResizeBox();
 }
 function placeResizeBox(){
   if(!selImg||!resizeBox)return;
-  const ed=editor();
+  const ed=selImg.closest('.rich-editor')||activeEd();
   if(!ed.contains(selImg)){deselectImg();return;}
   const er=ed.getBoundingClientRect(),ir=selImg.getBoundingClientRect();
   resizeBox.style.left=(ir.left-er.left+ed.scrollLeft)+'px';
@@ -2175,7 +2305,7 @@ function startImgResize(e,corner){
   const startX=e.clientX;
   const startW=img.getBoundingClientRect().width;
   const dir=(corner==='ne'||corner==='se')?1:-1; // esquinas derechas agrandan hacia la derecha
-  const maxW=editor().clientWidth-36;
+  const maxW=(img.closest('.rich-editor')||editor()).clientWidth-36;
   const move=ev=>{
     let w=startW+dir*(ev.clientX-startX);
     w=Math.max(60,Math.min(maxW,w));
@@ -2185,7 +2315,7 @@ function startImgResize(e,corner){
   const up=()=>{
     document.removeEventListener('pointermove',move);
     document.removeEventListener('pointerup',up);
-    scheduleSave(0);
+    scheduleSaveActive(0);
   };
   document.addEventListener('pointermove',move);
   document.addEventListener('pointerup',up);
@@ -2194,13 +2324,19 @@ $('editor').addEventListener('click',e=>{
   if(editMode&&e.target.tagName==='IMG')selectImg(e.target);
   else if(!e.target.closest('.img-handle'))deselectImg();
 });
+$('noteEditor').addEventListener('click',e=>{
+  if(e.target.tagName==='IMG')selectImg(e.target);
+  else if(!e.target.closest('.img-handle'))deselectImg();
+});
 $('editor').addEventListener('scroll',placeResizeBox);
+$('noteEditor').addEventListener('scroll',placeResizeBox);
 window.addEventListener('resize',placeResizeBox);
 $('editor').addEventListener('input',placeResizeBox);
+$('noteEditor').addEventListener('input',placeResizeBox);
 
 /* Pegar: imágenes del portapapeles se insertan; texto entra plano (sin estilos ajenos) */
 document.addEventListener('paste',e=>{
-  const ed=editor();
+  const ed=activeEd();
   if(!ed.contains(document.activeElement)&&document.activeElement!==ed)return;
   const items=e.clipboardData&&e.clipboardData.items;
   if(items){
@@ -2950,7 +3086,8 @@ $('btnClose').addEventListener('click',closeModal);
 $('overlay').addEventListener('click',e=>{if(e.target===$('overlay'))closeModal();});
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){
-    if($('dailyOverlay').classList.contains('open'))$('dailyOverlay').classList.remove('open');
+    if($('noteOverlay').classList.contains('open')){closeNote();renderNotes();}
+    else if($('dailyOverlay').classList.contains('open'))$('dailyOverlay').classList.remove('open');
     else if($('menuDropdown').classList.contains('open'))$('menuDropdown').classList.remove('open');
     else if($('imgZoom').classList.contains('open'))$('imgZoom').classList.remove('open');
     else if($('calOverlay').classList.contains('open'))$('calOverlay').classList.remove('open');
@@ -3122,6 +3259,184 @@ async function migrate(){
   }
 }
 
+/* ============ Notas para calls ============ */
+let notes=[];
+let noteRemote=null;
+let editingNote=null;
+let noteUndoStack=[];
+let noteSaveTimer=null;
+const noteEd=()=>$('noteEditor');
+
+function initNotesRemote(){
+  if(remote){noteRemote=remote.parent.collection('notas');}
+}
+async function loadNotes(){
+  notes=await dbNotesAll();
+  if(noteRemote){
+    try{
+      const snap=await noteRemote.get();
+      const remoteIds=new Set(snap.docs.map(d=>d.id));
+      for(const n of notes){if(!remoteIds.has(n.id))noteRemote.doc(n.id).set(n).catch(()=>{});}
+      noteRemote.onSnapshot(sn=>{
+        let changed=false;
+        sn.docChanges().forEach(ch=>{
+          if(ch.doc.metadata.hasPendingWrites)return;
+          const id=ch.doc.id;
+          if(editingNote===id)return;
+          if(ch.type==='removed'){
+            if(notes.some(x=>x.id===id)){notes=notes.filter(x=>x.id!==id);dbNoteDel(id);changed=true;}
+            return;
+          }
+          const data=ch.doc.data();
+          const local=notes.find(x=>x.id===id);
+          if(local)Object.assign(local,data); else notes.push(data);
+          dbNotePut(data);changed=true;
+        });
+        if(changed&&$('notesView').style.display!=='none')renderNotes();
+      },()=>{});
+    }catch(e){}
+  }
+}
+async function persistNote(n){
+  await dbNotePut(n);
+  if(noteRemote)noteRemote.doc(n.id).set(n).catch(()=>{});
+}
+async function removeNote(id){
+  await dbNoteDel(id);
+  if(noteRemote)noteRemote.doc(id).delete().catch(()=>{});
+}
+
+function openNotesView(){
+  $('notesView').style.display='block';
+  document.querySelector('main').style.display='none';
+  document.querySelector('.summary-bar').style.display='none';
+  document.querySelector('.filter-bar').style.display='none';
+  const sb=$('backupReminder');if(sb)sb.style.display='none';
+  renderNotes();
+}
+function closeNotesView(){
+  $('notesView').style.display='none';
+  document.querySelector('main').style.display='';
+  render();
+}
+$('btnNotes').addEventListener('click',openNotesView);
+$('notesBack').addEventListener('click',closeNotesView);
+
+function notePreview(html){
+  const d=document.createElement('div');d.innerHTML=html||'';
+  return (d.textContent||'').replace(/\s+/g,' ').trim();
+}
+function renderNotes(){
+  const grid=$('notesGrid');grid.innerHTML='';
+  const q=$('notesSearch').value.trim().toLowerCase();
+  let items=notes.slice().sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
+  if(q)items=items.filter(n=>((n.title||'')+' '+notePreview(n.html)).toLowerCase().includes(q));
+  if(!items.length){
+    grid.innerHTML=`<div class="notes-empty">${q?'Sin resultados.':'No hay notas todavía. Creá una con “＋ Nueva nota” para tus calls.'}</div>`;
+    return;
+  }
+  items.forEach(n=>{
+    const card=document.createElement('div');card.className='note-card';
+    const fecha=n.updatedAt?new Date(n.updatedAt).toLocaleDateString('es-AR',{day:'2-digit',month:'short',year:'2-digit'}):'';
+    card.innerHTML=`
+      <button class="note-del" title="Eliminar">✕</button>
+      <h3>${esc(n.title)||'(sin título)'}</h3>
+      <div class="note-preview">${esc(notePreview(n.html))||'<i>Sin contenido</i>'}</div>
+      <div class="note-date">${fecha}</div>`;
+    card.addEventListener('click',e=>{if(e.target.closest('.note-del'))return;openNote(n.id);});
+    card.querySelector('.note-del').addEventListener('click',async()=>{
+      if(!confirm('¿Eliminar esta nota?'))return;
+      await removeNote(n.id);notes=notes.filter(x=>x.id!==n.id);renderNotes();toast('Nota eliminada');
+    });
+    grid.appendChild(card);
+  });
+}
+$('notesSearch').addEventListener('input',renderNotes);
+$('notesNew').addEventListener('click',()=>openNote(null));
+
+function openNote(id){
+  editingNote=id;noteUndoStack=[];updateNoteUndo();
+  let n;
+  if(id)n=notes.find(x=>x.id===id);
+  else n={title:'',html:''};
+  $('noteTitle').value=n.title||'';
+  noteEd().innerHTML=sanitize(n.html||'');
+  $('noteDelete').style.display=id?'':'none';
+  $('noteOverlay').classList.add('open');
+  setTimeout(()=>$('noteTitle').focus(),60);
+}
+function closeNote(){
+  deselectImg();
+  if(noteSaveTimer){clearTimeout(noteSaveTimer);saveNote();}
+  $('noteOverlay').classList.remove('open');
+  editingNote=null;noteUndoStack=[];
+}
+function updateNoteUndo(){
+  const c=$('noteUndoCount');
+  $('noteUndo').disabled=!noteUndoStack.length;
+  c.textContent=noteUndoStack.length;c.classList.toggle('on',noteUndoStack.length>0);
+}
+function scheduleNoteSave(d=450){clearTimeout(noteSaveTimer);noteSaveTimer=setTimeout(saveNote,d);}
+async function saveNote(){
+  let n,prev=null,creating=false;
+  if(editingNote){n=notes.find(x=>x.id===editingNote);if(!n)return;prev=JSON.stringify(n);}
+  else{
+    if(!$('noteTitle').value.trim()&&!noteEd().textContent.trim())return;
+    n={id:uid(),createdAt:Date.now()};creating=true;
+  }
+  const nuevo={title:$('noteTitle').value.trim(),html:sanitize(noteEd().innerHTML),updatedAt:Date.now()};
+  if(prev!==null){const test={...n,...nuevo};delete test.updatedAt;const old2=JSON.parse(prev);delete old2.updatedAt;if(JSON.stringify(test)===JSON.stringify(old2))return;}
+  if(creating){notes.push(n);editingNote=n.id;$('noteDelete').style.display='';}
+  if(noteUndoStack.length<50)noteUndoStack.push(creating?null:prev);else{noteUndoStack.shift();noteUndoStack.push(creating?null:prev);}
+  updateNoteUndo();
+  Object.assign(n,nuevo);
+  await persistNote(n);
+  const ss=$('noteSaved');ss.style.opacity='1';clearTimeout(ss._h);ss._h=setTimeout(()=>ss.style.opacity='0',1200);
+}
+$('noteTitle').addEventListener('input',()=>scheduleNoteSave());
+$('noteEditor').addEventListener('input',()=>scheduleNoteSave());
+$('noteInsertImg').addEventListener('mousedown',e=>e.preventDefault());
+$('noteInsertImg').addEventListener('click',()=>$('noteImgInput').click());
+$('noteImgInput').addEventListener('change',e=>{const f=e.target.files[0];if(f)compressImage(f,url=>insertImageAtCaret(url));e.target.value='';});
+
+// formato del editor de notas
+document.querySelectorAll('#noteOverlay .fmt-btn').forEach(b=>{
+  b.addEventListener('mousedown',e=>e.preventDefault());
+  b.addEventListener('click',()=>{
+    noteEd().focus();
+    try{document.execCommand('styleWithCSS',false,true);}catch(e){}
+    if(b.dataset.ncmd)document.execCommand(b.dataset.ncmd,false,null);
+    else if(b.dataset.nhl)document.execCommand('hiliteColor',false,b.dataset.nhl);
+    else if(b.dataset.nfc)document.execCommand('foreColor',false,b.dataset.nfc);
+    scheduleNoteSave();
+  });
+});
+
+$('noteUndo').addEventListener('click',async()=>{
+  clearTimeout(noteSaveTimer);await saveNote();
+  if(!noteUndoStack.length)return;
+  const prev=noteUndoStack.pop();updateNoteUndo();
+  if(prev===null){
+    if(editingNote){await removeNote(editingNote);notes=notes.filter(x=>x.id!==editingNote);editingNote=null;}
+    $('noteTitle').value='';noteEd().innerHTML='';$('noteDelete').style.display='none';
+    return;
+  }
+  const n=notes.find(x=>x.id===editingNote);if(!n)return;
+  const r=JSON.parse(prev);Object.keys(n).forEach(k=>delete n[k]);Object.assign(n,r);
+  await persistNote(n);
+  $('noteTitle').value=n.title||'';noteEd().innerHTML=sanitize(n.html||'');
+});
+
+$('noteDelete').addEventListener('click',async()=>{
+  if(!editingNote)return;
+  if(!confirm('¿Eliminar esta nota?'))return;
+  await removeNote(editingNote);notes=notes.filter(x=>x.id!==editingNote);
+  closeNote();renderNotes();toast('Nota eliminada');
+});
+$('noteDone').addEventListener('click',()=>{clearTimeout(noteSaveTimer);saveNote().then(()=>{closeNote();renderNotes();});});
+$('noteClose').addEventListener('click',()=>{closeNote();renderNotes();});
+$('noteOverlay').addEventListener('click',e=>{if(e.target===$('noteOverlay')){closeNote();renderNotes();}});
+
 /* ============ Init ============ */
 /* PWA: registrar el service worker (si el navegador lo soporta) */
 if('serviceWorker' in navigator){
@@ -3139,6 +3454,8 @@ if('serviceWorker' in navigator){
   await loadAreaColors();
   await loadSecNames();
   applySecNames();
+  initNotesRemote();
+  await loadNotes();
   render();
   initSortable();
   startSync();
