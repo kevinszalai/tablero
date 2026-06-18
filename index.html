@@ -191,6 +191,27 @@ main{max-width:1180px;margin:0 auto;padding:28px 20px}
 .note-card .note-del:hover{color:#C01D44;background:#FDEDF1}
 .notes-empty{grid-column:1/-1;border:1.5px dashed var(--line);border-radius:var(--radius);
   padding:40px;text-align:center;color:var(--ink-soft);font-size:14px}
+.mention-popup{
+  position:absolute;z-index:120;background:var(--surface);
+  border:1px solid var(--line);border-radius:11px;box-shadow:0 12px 32px rgba(13,23,35,.18);
+  padding:5px;min-width:240px;max-width:320px;max-height:260px;overflow-y:auto;display:none;
+}
+.mention-popup.open{display:block}
+.mention-item{
+  padding:8px 10px;border-radius:8px;cursor:pointer;font-size:13px;
+  display:flex;align-items:center;gap:8px;
+}
+.mention-item:hover,.mention-item.sel{background:var(--bg)}
+.mention-item .mi-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+.mention-item .mi-sec{font-size:10.5px;color:var(--ink-soft);margin-left:auto;flex-shrink:0}
+.mention-empty{padding:10px;font-size:12.5px;color:var(--ink-soft)}
+.task-mention{
+  display:inline-flex;align-items:center;gap:4px;
+  background:#EAF3FB;color:var(--azul);border:1px solid #C9E0F2;border-radius:6px;
+  padding:1px 7px;font-size:12.5px;font-weight:600;cursor:pointer;
+  text-decoration:none;white-space:nowrap;
+}
+.task-mention:hover{background:#DCEBF8}
 
 .summary-bar{
   max-width:1180px;margin:14px auto 0;padding:11px 16px;
@@ -709,7 +730,7 @@ body.focus-mode .sub-pill.sub-add{text-align:center;justify-content:center}
     <div class="brand-mark">KS</div>
     <div>
       <h1>Tablero de Tareas</h1>
-      <small>Seguimiento diario · Marketing · v4.7</small>
+      <small>Seguimiento diario · Marketing · v4.8</small>
     </div>
     <span class="sync-pill" id="syncPill" title="">● Local</span>
   </div>
@@ -797,6 +818,7 @@ body.focus-mode .sub-pill.sub-add{text-align:center;justify-content:center}
         <button class="fmt-btn" type="button" id="noteInsertImg" title="Insertar imagen">🖼</button>
       </div>
       <input type="file" id="noteImgInput" accept="image/*" hidden>
+      <div class="mention-popup" id="mentionPopup"></div>
       <div class="rich-editor" id="noteEditor" contenteditable="true" style="height:340px" data-placeholder="Escribí tus notas de la call acá… Podés usar negritas, colores, resaltado y listas."></div>
       <div class="modal-foot" style="margin-top:18px">
         <button class="btn btn-danger" id="noteDelete">Eliminar nota</button>
@@ -1337,6 +1359,9 @@ function sanitize(html){
         const n=a.name.toLowerCase();
         if(el.tagName==='IMG'&&n==='src'&&/^data:image\//.test(a.value))return;
         if(el.tagName==='A'&&n==='href'&&/^https?:/i.test(a.value))return;
+        if(n==='data-taskid'&&/^[a-z0-9]+$/i.test(a.value))return;
+        if(n==='class'&&a.value==='task-mention')return;
+        if(n==='contenteditable')return;
         if(n==='style'){
           // del style solo sobreviven color, fondo, negrita y el ancho de imágenes
           const c=el.style.color,bg=el.style.backgroundColor,fw=el.style.fontWeight,w=el.style.width;
@@ -3366,6 +3391,7 @@ function openNote(id){
   setTimeout(()=>$('noteTitle').focus(),60);
 }
 function closeNote(){
+  closeMention();
   deselectImg();
   if(noteSaveTimer){clearTimeout(noteSaveTimer);saveNote();}
   $('noteOverlay').classList.remove('open');
@@ -3436,6 +3462,119 @@ $('noteDelete').addEventListener('click',async()=>{
 $('noteDone').addEventListener('click',()=>{clearTimeout(noteSaveTimer);saveNote().then(()=>{closeNote();renderNotes();});});
 $('noteClose').addEventListener('click',()=>{closeNote();renderNotes();});
 $('noteOverlay').addEventListener('click',e=>{if(e.target===$('noteOverlay')){closeNote();renderNotes();}});
+
+/* ============ Menciones de tareas en notas (@) ============ */
+let mentionRange=null,mentionItems=[],mentionSel=0;
+
+function buildMentionChip(t){
+  const sp=document.createElement('span');
+  sp.className='task-mention';
+  sp.setAttribute('data-taskid',t.id);
+  sp.setAttribute('contenteditable','false');
+  sp.textContent='@'+(t.title||'tarea');
+  return sp;
+}
+
+function openMention(query){
+  const q=query.toLowerCase();
+  mentionItems=alive().filter(t=>(t.title||'').toLowerCase().includes(q)).slice(0,8);
+  const pop=$('mentionPopup');
+  if(!mentionItems.length){
+    pop.innerHTML='<div class="mention-empty">Sin tareas que coincidan</div>';
+  }else{
+    pop.innerHTML='';
+    const SECN={activas:'Activas',seguimiento:secNames.seguimiento||'Merci',eventos:'Eventos',finalizadas:'Finalizadas'};
+    mentionItems.forEach((t,i)=>{
+      const it=document.createElement('div');
+      it.className='mention-item'+(i===mentionSel?' sel':'');
+      it.innerHTML=`<span class="mi-dot" style="background:${areaColor(t.area)}"></span>${esc(t.title||'(sin nombre)')}<span class="mi-sec">${SECN[t.section]||t.section}</span>`;
+      it.addEventListener('mousedown',e=>{e.preventDefault();pickMention(i);});
+      pop.appendChild(it);
+    });
+  }
+  // posicionar el popup cerca del cursor
+  try{
+    const sel=window.getSelection();
+    if(sel.rangeCount&&sel.getRangeAt(0).getClientRects){
+      const r=sel.getRangeAt(0).getClientRects()[0];
+      const overlayRect=document.querySelector('#noteOverlay .modal').getBoundingClientRect();
+      if(r){
+        pop.style.left=Math.max(8,(r.left-overlayRect.left))+'px';
+        pop.style.top=(r.bottom-overlayRect.top+4)+'px';
+      }
+    }
+  }catch(e){}
+  pop.classList.add('open');
+}
+function closeMention(){$('mentionPopup').classList.remove('open');mentionRange=null;mentionItems=[];mentionSel=0;}
+
+function pickMention(i){
+  const t=mentionItems[i];if(!t||!mentionRange)return;
+  const chip=buildMentionChip(t);
+  const space=document.createTextNode('\u00A0');
+  // mentionRange abarca exactamente el "@query": lo borramos e insertamos el chip ahí
+  const range=mentionRange.cloneRange();
+  range.deleteContents();
+  range.insertNode(space);
+  range.insertNode(chip); // queda: chip + space
+  // dejar el cursor después del espacio para seguir escribiendo
+  const sel=window.getSelection();
+  const after=document.createRange();
+  after.setStartAfter(space);after.collapse(true);
+  sel.removeAllRanges();sel.addRange(after);
+  $('noteEditor').focus();
+  closeMention();
+  scheduleNoteSave(0);
+}
+
+// detectar @ mientras se escribe en la nota
+$('noteEditor').addEventListener('keyup',e=>{
+  if(['ArrowDown','ArrowUp','Enter','Escape'].includes(e.key)&&$('mentionPopup').classList.contains('open'))return;
+  const sel=window.getSelection();
+  if(!sel.rangeCount)return;
+  const r=sel.getRangeAt(0);
+  const node=r.startContainer;
+  if(node.nodeType!==3){closeMention();return;}
+  const text=node.textContent.slice(0,r.startOffset);
+  const m=text.match(/@([^\s@]{0,30})$/);
+  if(m){
+    // guardar el rango que abarca "@query" para reemplazarlo después
+    const range=document.createRange();
+    range.setStart(node,r.startOffset-m[0].length);
+    range.setEnd(node,r.startOffset);
+    mentionRange=range;mentionSel=0;
+    openMention(m[1]);
+  }else{
+    closeMention();
+  }
+});
+// navegación con teclado en el popup
+$('noteEditor').addEventListener('keydown',e=>{
+  if(!$('mentionPopup').classList.contains('open'))return;
+  if(e.key==='ArrowDown'){e.preventDefault();mentionSel=(mentionSel+1)%Math.max(1,mentionItems.length);refreshMentionSel();}
+  else if(e.key==='ArrowUp'){e.preventDefault();mentionSel=(mentionSel-1+mentionItems.length)%Math.max(1,mentionItems.length);refreshMentionSel();}
+  else if(e.key==='Enter'){if(mentionItems.length){e.preventDefault();pickMention(mentionSel);}}
+  else if(e.key==='Escape'){e.preventDefault();closeMention();}
+});
+function refreshMentionSel(){
+  [...$('mentionPopup').querySelectorAll('.mention-item')].forEach((el,i)=>el.classList.toggle('sel',i===mentionSel));
+}
+
+// click en un chip de mención abre la tarea
+$('noteEditor').addEventListener('click',e=>{
+  const chip=e.target.closest('.task-mention');
+  if(chip){
+    const id=chip.getAttribute('data-taskid');
+    const t=tasks.find(x=>x.id===id&&!x.deleted);
+    if(t){
+      closeNote();renderNotes();
+      closeNotesView();
+      openModal(id);
+    }else{
+      toast('Esa tarea ya no existe');
+    }
+  }
+});
 
 /* ============ Init ============ */
 /* PWA: registrar el service worker (si el navegador lo soporta) */
