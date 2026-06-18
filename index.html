@@ -309,6 +309,12 @@ body.focus-mode .sub-pill.sub-add{text-align:center;justify-content:center}
 .panel-row .pr-title{font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .panel-row .pr-sub{font-size:11.5px;color:var(--ink-soft);margin-top:2px}
 .panel-row .btn{padding:7px 12px;font-size:12.5px}
+.trash-actions{
+  display:flex;align-items:center;gap:9px;flex-wrap:wrap;
+  padding-bottom:14px;margin-bottom:14px;border-bottom:1px solid var(--line);
+}
+.trash-actions .trash-count{font-size:12.5px;font-weight:600;color:var(--ink-soft);margin-right:auto}
+.trash-actions .btn{padding:7px 13px;font-size:12.5px}
 .color-swatches{display:flex;gap:5px;flex-wrap:wrap;max-width:200px}
 .cswatch{width:22px;height:22px;border-radius:6px;border:2px solid transparent;cursor:pointer}
 .cswatch:hover{transform:scale(1.12)}
@@ -658,7 +664,7 @@ body.focus-mode .sub-pill.sub-add{text-align:center;justify-content:center}
     <div class="brand-mark">KS</div>
     <div>
       <h1>Tablero de Tareas</h1>
-      <small>Seguimiento diario · Marketing · v3.7</small>
+      <small>Seguimiento diario · Marketing · v3.8</small>
     </div>
     <span class="sync-pill" id="syncPill" title="">● Local</span>
   </div>
@@ -2495,6 +2501,28 @@ function renderTrash(){
     box.innerHTML='<div class="empty-msg">La papelera está vacía.</div>';
     return;
   }
+  // barra de acciones masivas
+  const bar=document.createElement('div');bar.className='trash-actions';
+  bar.innerHTML=`
+    <span class="trash-count">${items.length} en la papelera</span>
+    <button class="btn btn-ghost" data-restore-all>↩ Restaurar todo</button>
+    <button class="btn btn-danger" data-empty>🗑 Vaciar papelera</button>`;
+  bar.querySelector('[data-restore-all]').addEventListener('click',async()=>{
+    if(!confirm(`¿Restaurar las ${items.length} tareas de la papelera?`))return;
+    for(const t of items){delete t.deleted;t.order=maxOrder(t.section||'activas')+1;await persist(t);}
+    renderTrash();render();
+    toast('Papelera restaurada ✓');
+  });
+  bar.querySelector('[data-empty]').addEventListener('click',async()=>{
+    if(!confirm(`¿Borrar definitivamente las ${items.length} tareas de la papelera? Esta acción no se puede deshacer.`))return;
+    const ids=items.map(t=>t.id);
+    for(const id of ids)await removeTask(id);
+    tasks=tasks.filter(x=>!ids.includes(x.id));
+    renderTrash();render();
+    toast('Papelera vaciada');
+  });
+  box.appendChild(bar);
+
   items.forEach(t=>{
     const dias=Math.max(0,TRASH_DAYS-Math.floor((Date.now()-t.deleted)/(24*3600*1000)));
     const row=document.createElement('div');row.className='panel-row';
