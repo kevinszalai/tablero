@@ -159,6 +159,16 @@ main{max-width:1180px;margin:0 auto;padding:28px 20px}
   display:flex;gap:7px;flex-wrap:wrap;align-items:center;
 }
 .filter-bar:empty{display:none}
+.backup-reminder{
+  max-width:1180px;margin:14px auto 0;padding:11px 16px;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  background:#FFF8E6;border:1px solid #F0DDA0;border-radius:12px;
+  font-size:13.5px;font-weight:500;color:#8A6400;
+}
+.backup-reminder span{flex:1;min-width:200px}
+.backup-reminder .btn{padding:8px 14px;font-size:13px}
+.backup-x{border:none;background:none;cursor:pointer;color:#8A6400;font-size:15px;padding:4px 7px;border-radius:7px}
+.backup-x:hover{background:#F0DDA0}
 .summary-bar{
   max-width:1180px;margin:14px auto 0;padding:11px 16px;
   display:flex;gap:9px;flex-wrap:wrap;align-items:center;
@@ -676,7 +686,7 @@ body.focus-mode .sub-pill.sub-add{text-align:center;justify-content:center}
     <div class="brand-mark">KS</div>
     <div>
       <h1>Tablero de Tareas</h1>
-      <small>Seguimiento diario · Marketing · v4.3</small>
+      <small>Seguimiento diario · Marketing · v4.5</small>
     </div>
     <span class="sync-pill" id="syncPill" title="">● Local</span>
   </div>
@@ -703,6 +713,11 @@ body.focus-mode .sub-pill.sub-add{text-align:center;justify-content:center}
   </div>
 </header>
 
+<div class="backup-reminder" id="backupReminder" style="display:none">
+  <span>🗂️ Pasaron más de 15 días desde tu último respaldo. Conviene bajar uno.</span>
+  <button class="btn btn-primary" id="backupNow">⬇ Descargar ahora</button>
+  <button class="backup-x" id="backupLater" title="Recordar mañana">✕</button>
+</div>
 <div class="summary-bar" id="summaryBar" style="display:none"></div>
 <div class="filter-bar" id="filterBar"></div>
 
@@ -1412,6 +1427,28 @@ function alertasEventos(){
   });
   return res.sort((a,b)=>a.orden-b.orden);
 }
+
+function chequearRespaldo(){
+  let ultimo=null;
+  try{ultimo=localStorage.getItem('ultimoRespaldo');}catch(e){}
+  let pospuesto=null;
+  try{pospuesto=localStorage.getItem('respaldoPospuesto');}catch(e){}
+  const hoy=new Date().toISOString().slice(0,10);
+  if(pospuesto===hoy)return; // lo pospuso para hoy
+  if(!alive().length)return; // tablero vacío, nada que respaldar
+  let mostrar=false;
+  if(!ultimo){mostrar=true;} // nunca respaldó
+  else{
+    const dias=Math.floor((new Date(hoy)-new Date(ultimo))/(24*3600*1000));
+    if(dias>=15)mostrar=true;
+  }
+  $('backupReminder').style.display=mostrar?'flex':'none';
+}
+$('backupNow').addEventListener('click',()=>{descargarRespaldo();$('backupReminder').style.display='none';});
+$('backupLater').addEventListener('click',()=>{
+  try{localStorage.setItem('respaldoPospuesto',new Date().toISOString().slice(0,10));}catch(e){}
+  $('backupReminder').style.display='none';
+});
 
 function mostrarPopDiario(){
   const hoyStr=new Date().toISOString().slice(0,10);
@@ -3039,14 +3076,16 @@ $('newEvent').addEventListener('click',()=>{$('newTypeOverlay').classList.remove
 $('newTypeOverlay').addEventListener('click',e=>{if(e.target===$('newTypeOverlay'))$('newTypeOverlay').classList.remove('open');});
 $('search').addEventListener('input',render);
 
-$('btnExport').addEventListener('click',()=>{
+function descargarRespaldo(){
   const blob=new Blob([JSON.stringify(tasks,null,2)],{type:'application/json'});
   const a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
   a.download='tablero-respaldo-'+new Date().toISOString().slice(0,10)+'.json';
   a.click();URL.revokeObjectURL(a.href);
+  try{localStorage.setItem('ultimoRespaldo',new Date().toISOString().slice(0,10));}catch(e){}
   toast('Respaldo descargado');
-});
+}
+$('btnExport').addEventListener('click',descargarRespaldo);
 $('btnImport').addEventListener('click',()=>$('importFile').click());
 $('importFile').addEventListener('change',e=>{
   const f=e.target.files[0];if(!f)return;
@@ -3103,7 +3142,7 @@ if('serviceWorker' in navigator){
   render();
   initSortable();
   startSync();
-  setTimeout(()=>{notificarEventos(false);mostrarPopDiario();},1200);
+  setTimeout(()=>{notificarEventos(false);mostrarPopDiario();chequearRespaldo();},1200);
 })();
 </script>
 </body>
