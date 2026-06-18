@@ -299,6 +299,18 @@ body.focus-mode .sub-pill.sub-add{text-align:center;justify-content:center}
 .newtype-opt .nt-ico{font-size:30px}
 .newtype-opt span{font-size:15px;font-weight:700;color:var(--ink)}
 .newtype-opt small{font-size:11.5px;color:var(--ink-soft)}
+.daily-item{
+  display:flex;align-items:center;gap:11px;
+  border:1px solid var(--line);border-radius:11px;padding:11px 13px;margin-bottom:9px;cursor:pointer;
+  transition:border-color .12s;
+}
+.daily-item:hover{border-color:var(--azul)}
+.daily-item .di-ico{font-size:20px;flex-shrink:0}
+.daily-item .di-main{flex:1;min-width:0}
+.daily-item .di-title{font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.daily-item .di-state{font-size:12px;font-weight:600;margin-top:2px}
+.daily-item .di-state.rojo{color:#C01D44}
+.daily-item .di-state.amber{color:#8A6400}
 .panel-note{font-size:12.5px;color:var(--ink-soft);margin-bottom:16px}
 .panel-row{
   display:flex;align-items:center;gap:11px;
@@ -664,7 +676,7 @@ body.focus-mode .sub-pill.sub-add{text-align:center;justify-content:center}
     <div class="brand-mark">KS</div>
     <div>
       <h1>Tablero de Tareas</h1>
-      <small>Seguimiento diario · Marketing · v4.2</small>
+      <small>Seguimiento diario · Marketing · v4.3</small>
     </div>
     <span class="sync-pill" id="syncPill" title="">● Local</span>
   </div>
@@ -863,6 +875,24 @@ body.focus-mode .sub-pill.sub-add{text-align:center;justify-content:center}
         <span class="save-status" id="saveStatus">Guardado ✓</span>
         <div class="spacer"></div>
         <button class="btn btn-primary" id="btnDone">✓ Listo</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Resumen diario de alertas -->
+<div class="overlay" id="dailyOverlay">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-inner">
+      <div class="modal-head">
+        <h2 class="panel-title">📣 Alertas de eventos</h2>
+        <button class="close-x" data-close-daily title="Cerrar">✕</button>
+      </div>
+      <p class="panel-note" id="dailyDate"></p>
+      <div id="dailyList"></div>
+      <div class="modal-foot" style="margin-top:18px">
+        <div class="spacer"></div>
+        <button class="btn btn-primary" data-close-daily>Entendido</button>
       </div>
     </div>
   </div>
@@ -1354,6 +1384,56 @@ function renderSummary(){
     bar.appendChild(b);
   }
   bar.style.display=vivas.length?'flex':'none';
+}
+
+/* Resumen de alertas para el pop-up diario */
+function alertasEventos(){
+  const hoy=new Date();hoy.setHours(0,0,0,0);
+  const res=[];
+  alive().filter(t=>t.section==='eventos').forEach(t=>{
+    // entregas: dentro de 24 días o vencidas
+    if(t.fechaEntregas){
+      const de=diasHasta(t.fechaEntregas);
+      if(de!==null&&de<=24){
+        const rojo=de<=15||de<0;
+        const txt=de<0?`Entregas vencidas hace ${-de} día${-de===1?'':'s'}`:de===0?'Entregas HOY':de===1?'Entregas mañana':`Entregas en ${de} días`;
+        res.push({t,ico:'📦',txt,rojo,orden:de});
+      }
+    }
+    // evento: dentro de 45 días
+    if(t.fechaEntrega){
+      const d=diasHasta(t.fechaEntrega);
+      if(d!==null&&d>=0&&d<=45){
+        const rojo=d<=20;
+        const txt=d===0?'Evento HOY':d===1?'Evento mañana':`Evento en ${d} días`;
+        res.push({t,ico:'📣',txt,rojo,orden:d});
+      }
+    }
+  });
+  return res.sort((a,b)=>a.orden-b.orden);
+}
+
+function mostrarPopDiario(){
+  const hoyStr=new Date().toISOString().slice(0,10);
+  let ultimo=null;
+  try{ultimo=localStorage.getItem('popDiario');}catch(e){}
+  if(ultimo===hoyStr)return; // ya se mostró hoy
+  const alertas=alertasEventos();
+  if(!alertas.length)return;
+  try{localStorage.setItem('popDiario',hoyStr);}catch(e){}
+  const box=$('dailyList');box.innerHTML='';
+  $('dailyDate').textContent=new Date().toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'})+' · '+alertas.length+' alerta'+(alertas.length>1?'s':'');
+  alertas.forEach(a=>{
+    const row=document.createElement('div');row.className='daily-item';
+    row.innerHTML=`<span class="di-ico">${a.ico}</span>
+      <div class="di-main">
+        <div class="di-title">${esc(a.t.title)||'(sin nombre)'}</div>
+        <div class="di-state ${a.rojo?'rojo':'amber'}">${a.txt}</div>
+      </div>`;
+    row.addEventListener('click',()=>{$('dailyOverlay').classList.remove('open');openModal(a.t.id);});
+    box.appendChild(row);
+  });
+  $('dailyOverlay').classList.add('open');
 }
 
 let notifShown=false;
@@ -2745,6 +2825,9 @@ function renderCal(){
 }
 function stripTime(d){const n=new Date(d);n.setHours(0,0,0,0);return n;}
 
+document.querySelectorAll('[data-close-daily]').forEach(b=>b.addEventListener('click',()=>$('dailyOverlay').classList.remove('open')));
+$('dailyOverlay').addEventListener('click',e=>{if(e.target===$('dailyOverlay'))$('dailyOverlay').classList.remove('open');});
+
 $('btnCal').addEventListener('click',()=>{calRef=new Date();calRef.setDate(1);renderCal();$('calOverlay').classList.add('open');});
 $('calPrev').addEventListener('click',()=>{calRef.setMonth(calRef.getMonth()-1);renderCal();});
 $('calNext').addEventListener('click',()=>{calRef.setMonth(calRef.getMonth()+1);renderCal();});
@@ -2830,7 +2913,8 @@ $('btnClose').addEventListener('click',closeModal);
 $('overlay').addEventListener('click',e=>{if(e.target===$('overlay'))closeModal();});
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){
-    if($('menuDropdown').classList.contains('open'))$('menuDropdown').classList.remove('open');
+    if($('dailyOverlay').classList.contains('open'))$('dailyOverlay').classList.remove('open');
+    else if($('menuDropdown').classList.contains('open'))$('menuDropdown').classList.remove('open');
     else if($('imgZoom').classList.contains('open'))$('imgZoom').classList.remove('open');
     else if($('calOverlay').classList.contains('open'))$('calOverlay').classList.remove('open');
     else if($('newTypeOverlay').classList.contains('open'))$('newTypeOverlay').classList.remove('open');
@@ -3019,7 +3103,7 @@ if('serviceWorker' in navigator){
   render();
   initSortable();
   startSync();
-  setTimeout(()=>notificarEventos(false),1200);
+  setTimeout(()=>{notificarEventos(false);mostrarPopDiario();},1200);
 })();
 </script>
 </body>

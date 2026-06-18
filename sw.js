@@ -2,7 +2,7 @@
    Estrategia: red primero, con copia en caché como respaldo.
    Así siempre te llevás la última versión del repo, pero si no hay
    internet la app abre igual con lo último que vio. */
-const CACHE = 'tablero-ks-v17';
+const CACHE = 'tablero-ks-v18';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-512-maskable.png'];
 
 self.addEventListener('install', e => {
