@@ -730,7 +730,7 @@ body.focus-mode .sub-pill.sub-add{text-align:center;justify-content:center}
     <div class="brand-mark">KS</div>
     <div>
       <h1>Tablero de Tareas</h1>
-      <small>Seguimiento diario · Marketing · v4.8</small>
+      <small>Seguimiento diario · Marketing · v4.9</small>
     </div>
     <span class="sync-pill" id="syncPill" title="">● Local</span>
   </div>
@@ -3337,14 +3337,19 @@ function openNotesView(){
   document.querySelector('.summary-bar').style.display='none';
   document.querySelector('.filter-bar').style.display='none';
   const sb=$('backupReminder');if(sb)sb.style.display='none';
+  $('btnNotes').innerHTML='‹ Volver al tablero';
   renderNotes();
 }
 function closeNotesView(){
   $('notesView').style.display='none';
   document.querySelector('main').style.display='';
+  $('btnNotes').innerHTML='🗒️ Notas para calls';
   render();
 }
-$('btnNotes').addEventListener('click',openNotesView);
+$('btnNotes').addEventListener('click',()=>{
+  if($('notesView').style.display==='none'||!$('notesView').style.display)openNotesView();
+  else closeNotesView();
+});
 $('notesBack').addEventListener('click',closeNotesView);
 
 function notePreview(html){
