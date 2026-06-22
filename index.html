@@ -60,6 +60,32 @@ header{
 .sync-pill.ok{color:var(--teal);background:#E6F3F4;border-color:#BFE2E5}
 .sync-pill.err{color:#C01D44;background:#FDEDF1;border-color:#F6C3D0}
 .header-actions{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.quicklinks{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.ql-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  border:1px solid var(--line);background:var(--surface);border-radius:99px;
+  padding:7px 14px;font-size:13px;font-weight:600;color:var(--ink);
+  cursor:pointer;text-decoration:none;white-space:nowrap;transition:all .12s;
+}
+.ql-btn:hover{border-color:var(--azul);color:var(--azul);transform:translateY(-1px)}
+.ql-btn .ql-ico{font-size:14px}
+#qlMoreMenu .menu-item{text-decoration:none}
+/* editor de enlaces */
+.ql-row{
+  display:flex;align-items:center;gap:9px;
+  border:1px solid var(--line);border-radius:11px;padding:9px 11px;margin-bottom:9px;background:var(--bg);
+}
+.ql-row.dragging{opacity:.5}
+.ql-drag{cursor:grab;color:var(--ink-soft);font-size:16px;flex-shrink:0;touch-action:none}
+.ql-row input{
+  border:1px solid var(--line);border-radius:8px;padding:7px 10px;font:inherit;font-size:13px;background:#fff;
+}
+.ql-row .ql-text{width:130px;flex-shrink:0}
+.ql-row .ql-url{flex:1;min-width:0}
+.ql-row .ql-del{border:none;background:none;cursor:pointer;color:#C8D1DA;font-size:15px;padding:5px 7px;border-radius:7px;flex-shrink:0}
+.ql-row .ql-del:hover{color:#C01D44;background:#FDEDF1}
+.ql-empty{color:var(--ink-soft);font-size:13px;padding:14px;text-align:center;border:1.5px dashed var(--line);border-radius:11px}
+
 .menu-wrap{position:relative}
 .menu-btn{padding:10px 12px;position:relative}
 .burger{display:inline-flex;flex-direction:column;gap:3.5px;width:17px}
@@ -730,12 +756,18 @@ body.focus-mode .sub-pill.sub-add{text-align:center;justify-content:center}
     <div class="brand-mark">KS</div>
     <div>
       <h1>Tablero de Tareas</h1>
-      <small>Seguimiento diario · Marketing · v4.9</small>
+      <small>Seguimiento diario · Marketing · v5.0</small>
     </div>
     <span class="sync-pill" id="syncPill" title="">● Local</span>
   </div>
   <div class="header-actions">
     <input type="text" class="search" id="search" placeholder="Buscar tarea…">
+    <div class="quicklinks" id="quicklinks"></div>
+    <div class="menu-wrap" id="qlMoreWrap" style="display:none">
+      <button class="btn btn-ghost" id="qlMoreBtn" title="Más enlaces">🔗 Más ▾</button>
+      <div class="menu-dropdown" id="qlMoreMenu"></div>
+    </div>
+    <button class="btn btn-ghost" id="qlEdit" title="Administrar enlaces">🔗</button>
     <button class="btn btn-ghost" id="btnNotes">🗒️ Notas para calls</button>
     <button class="btn btn-primary" id="btnNew">＋ Nueva tarea</button>
     <div class="menu-wrap">
@@ -993,6 +1025,21 @@ body.focus-mode .sub-pill.sub-add{text-align:center;justify-content:center}
         <div class="spacer"></div>
         <button class="btn btn-primary" id="btnDone">✓ Listo</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Administrar enlaces rápidos -->
+<div class="overlay" id="qlOverlay">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-inner">
+      <div class="modal-head">
+        <h2 class="panel-title">🔗 Botones de enlaces</h2>
+        <button class="close-x" data-close-ql title="Cerrar">✕</button>
+      </div>
+      <p class="panel-note">Agregá accesos directos a las webs que más usás. Arrastrá <span style="font-weight:600">⠿</span> para ordenarlos. Los primeros 5 se ven en la barra; el resto va al menú “Más”.</p>
+      <div id="qlList"></div>
+      <button class="btn btn-ghost" id="qlAdd" style="margin-top:10px">＋ Agregar enlace</button>
     </div>
   </div>
 </div>
@@ -3111,7 +3158,9 @@ $('btnClose').addEventListener('click',closeModal);
 $('overlay').addEventListener('click',e=>{if(e.target===$('overlay'))closeModal();});
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){
-    if($('noteOverlay').classList.contains('open')){closeNote();renderNotes();}
+    if($('qlOverlay').classList.contains('open'))document.querySelector('[data-close-ql]').click();
+    else if($('qlMoreMenu').classList.contains('open'))$('qlMoreMenu').classList.remove('open');
+    else if($('noteOverlay').classList.contains('open')){closeNote();renderNotes();}
     else if($('dailyOverlay').classList.contains('open'))$('dailyOverlay').classList.remove('open');
     else if($('menuDropdown').classList.contains('open'))$('menuDropdown').classList.remove('open');
     else if($('imgZoom').classList.contains('open'))$('imgZoom').classList.remove('open');
@@ -3283,6 +3332,108 @@ async function migrate(){
     await dbPut(t);
   }
 }
+
+/* ============ Botones de enlaces rápidos ============ */
+let quicklinks=[];
+
+function normalizeUrl(u){
+  u=(u||'').trim();
+  if(!u)return '';
+  if(!/^https?:\/\//i.test(u))u='https://'+u;
+  return u;
+}
+async function loadQuicklinks(){
+  try{const r=await dbGetMeta('quicklinks');if(r&&r.value)quicklinks=r.value;}catch(e){}
+  if(remote){
+    remote.parent.collection('config').doc('quicklinks').get()
+      .then(d=>{if(d.exists&&d.data()&&Array.isArray(d.data().items)){quicklinks=d.data().items;renderQuicklinks();}})
+      .catch(()=>{});
+  }
+}
+async function saveQuicklinks(){
+  try{await dbSetMeta('quicklinks',quicklinks);}catch(e){}
+  if(remote){remote.parent.collection('config').doc('quicklinks').set({items:quicklinks}).catch(()=>{});}
+}
+
+function renderQuicklinks(){
+  const bar=$('quicklinks');bar.innerHTML='';
+  const visibles=quicklinks.slice(0,5);
+  const extra=quicklinks.slice(5);
+  visibles.forEach(l=>{
+    const a=document.createElement('a');
+    a.className='ql-btn';a.href=normalizeUrl(l.url);a.target='_blank';a.rel='noopener noreferrer';
+    a.innerHTML=`<span class="ql-ico">🔗</span>${esc(l.text||'Enlace')}`;
+    bar.appendChild(a);
+  });
+  // menú "Más" para el 6º en adelante
+  const moreWrap=$('qlMoreWrap'),moreMenu=$('qlMoreMenu');
+  if(extra.length){
+    moreWrap.style.display='';
+    moreMenu.innerHTML='';
+    extra.forEach(l=>{
+      const a=document.createElement('a');
+      a.className='menu-item';a.href=normalizeUrl(l.url);a.target='_blank';a.rel='noopener noreferrer';
+      a.innerHTML=`<span class="mi-ico">🔗</span> ${esc(l.text||'Enlace')}`;
+      moreMenu.appendChild(a);
+    });
+  }else{
+    moreWrap.style.display='none';
+  }
+}
+
+// menú "Más" abrir/cerrar
+$('qlMoreBtn').addEventListener('click',e=>{
+  e.stopPropagation();$('qlMoreMenu').classList.toggle('open');
+});
+$('qlMoreMenu').addEventListener('click',()=>$('qlMoreMenu').classList.remove('open'));
+document.addEventListener('click',e=>{if(!e.target.closest('#qlMoreWrap'))$('qlMoreMenu').classList.remove('open');});
+
+// editor de enlaces
+function renderQlEditor(){
+  const box=$('qlList');box.innerHTML='';
+  if(!quicklinks.length){
+    box.innerHTML='<div class="ql-empty">Todavía no agregaste enlaces. Tocá “＋ Agregar enlace”.</div>';
+    return;
+  }
+  quicklinks.forEach((l,idx)=>{
+    const row=document.createElement('div');row.className='ql-row';row.draggable=true;row.dataset.idx=idx;
+    row.innerHTML=`
+      <span class="ql-drag" title="Arrastrar para ordenar">⠿</span>
+      <input class="ql-text" placeholder="Texto del botón" value="${esc(l.text||'')}">
+      <input class="ql-url" placeholder="https://…" value="${esc(l.url||'')}">
+      <button class="ql-del" title="Eliminar">✕</button>`;
+    row.querySelector('.ql-text').addEventListener('input',e=>{quicklinks[idx].text=e.target.value;scheduleQlSave();});
+    row.querySelector('.ql-url').addEventListener('input',e=>{quicklinks[idx].url=e.target.value;scheduleQlSave();});
+    row.querySelector('.ql-del').addEventListener('click',async()=>{
+      quicklinks.splice(idx,1);await saveQuicklinks();renderQlEditor();renderQuicklinks();
+    });
+    // drag & drop para reordenar
+    row.addEventListener('dragstart',e=>{row.classList.add('dragging');e.dataTransfer.setData('text/plain',idx);});
+    row.addEventListener('dragend',()=>row.classList.remove('dragging'));
+    row.addEventListener('dragover',e=>e.preventDefault());
+    row.addEventListener('drop',async e=>{
+      e.preventDefault();
+      const from=+e.dataTransfer.getData('text/plain'),to=idx;
+      if(from===to)return;
+      const moved=quicklinks.splice(from,1)[0];
+      quicklinks.splice(to,0,moved);
+      await saveQuicklinks();renderQlEditor();renderQuicklinks();
+    });
+    box.appendChild(row);
+  });
+}
+let qlSaveTimer=null;
+function scheduleQlSave(){clearTimeout(qlSaveTimer);qlSaveTimer=setTimeout(()=>{saveQuicklinks();renderQuicklinks();},500);}
+
+$('qlEdit').addEventListener('click',()=>{renderQlEditor();$('qlOverlay').classList.add('open');});
+$('qlAdd').addEventListener('click',()=>{quicklinks.push({text:'',url:''});renderQlEditor();});
+document.querySelector('[data-close-ql]').addEventListener('click',()=>{
+  clearTimeout(qlSaveTimer);
+  quicklinks=quicklinks.filter(l=>(l.text||'').trim()||(l.url||'').trim()); // descartar filas vacías
+  saveQuicklinks();renderQuicklinks();
+  $('qlOverlay').classList.remove('open');
+});
+$('qlOverlay').addEventListener('click',e=>{if(e.target===$('qlOverlay'))document.querySelector('[data-close-ql]').click();});
 
 /* ============ Notas para calls ============ */
 let notes=[];
@@ -3600,6 +3751,8 @@ if('serviceWorker' in navigator){
   applySecNames();
   initNotesRemote();
   await loadNotes();
+  await loadQuicklinks();
+  renderQuicklinks();
   render();
   initSortable();
   startSync();
