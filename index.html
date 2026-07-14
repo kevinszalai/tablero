@@ -632,6 +632,34 @@ body.focus-mode .sub-pill.sub-add{text-align:center;justify-content:center}
   color:var(--ink-soft);margin:22px 0 10px;display:flex;align-items:center;gap:10px;
 }
 .block-head::after{content:"";flex:1;height:1px;background:var(--line)}
+/* Ítems (lista propia, separada del checklist) */
+.item-row{
+  display:flex;align-items:center;gap:9px;
+  border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-bottom:7px;background:var(--bg);
+}
+.item-row.done{opacity:.6}
+.item-row.done .item-text{text-decoration:line-through;color:var(--ink-soft)}
+.item-row.dragging{opacity:.4}
+.item-drag{cursor:grab;color:var(--ink-soft);font-size:15px;flex-shrink:0;touch-action:none}
+.item-check{width:19px;height:19px;flex-shrink:0;cursor:pointer;accent-color:var(--teal)}
+.item-text{flex:1;min-width:0;border:none;background:none;font:inherit;font-size:13.5px;color:var(--ink);padding:2px}
+.item-text:focus{outline:none}
+.item-date{border:1px solid var(--line);border-radius:7px;padding:4px 7px;font:inherit;font-size:12px;background:#fff;color:var(--ink-soft);flex-shrink:0;width:135px}
+.item-del{border:none;background:none;cursor:pointer;color:#C8D1DA;font-size:14px;padding:4px 6px;border-radius:6px;flex-shrink:0}
+.item-del:hover{color:#C01D44;background:#FDEDF1}
+.items-empty{color:var(--ink-soft);font-size:12.5px;padding:8px 2px}
+/* Ítems listados en la tarjeta (al filtrar sección) */
+.card-items{margin-top:9px;display:flex;flex-direction:column;gap:4px}
+.card-item{
+  display:flex;align-items:center;gap:8px;
+  background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:12.5px;
+}
+.card-item.done{opacity:.55}
+.card-item.done .ci-text{text-decoration:line-through;color:var(--ink-soft)}
+.card-item .ci-check{color:var(--teal);font-weight:700;flex-shrink:0}
+.card-item.done .ci-check{color:var(--ink-soft)}
+.card-item .ci-text{flex:1;min-width:0;overflow-wrap:anywhere}
+.card-item .ci-date{font-size:11px;color:var(--ink-soft);flex-shrink:0;background:var(--bg);border-radius:5px;padding:1px 7px}
 .block-head .tool{
   border:1px solid var(--line);background:var(--surface);border-radius:8px;
   font:inherit;font-size:12px;font-weight:600;color:var(--ink-soft);
@@ -756,7 +784,7 @@ body.focus-mode .sub-pill.sub-add{text-align:center;justify-content:center}
     <div class="brand-mark">KS</div>
     <div>
       <h1>Tablero de Tareas</h1>
-      <small>Seguimiento diario · Marketing · v5.0</small>
+      <small>Seguimiento diario · Marketing · v5.1</small>
     </div>
     <span class="sync-pill" id="syncPill" title="">● Local</span>
   </div>
@@ -945,6 +973,15 @@ body.focus-mode .sub-pill.sub-add{text-align:center;justify-content:center}
       <div class="add-check" id="addCheckRow">
         <input type="text" id="newCheckItem" placeholder="Nueva subtarea…">
         <button class="icon-btn" id="btnAddCheck" title="Agregar subtarea" style="width:38px;height:38px">＋</button>
+      </div>
+
+      <div class="block-head">
+        Ítems <span class="check-progress" id="itemsProgress"></span>
+      </div>
+      <div id="itemsList"></div>
+      <div class="add-check" id="addItemRow">
+        <input type="text" id="newItem" placeholder="Nuevo ítem…">
+        <button class="icon-btn" id="btnAddItem" title="Agregar ítem" style="width:38px;height:38px">＋</button>
       </div>
 
       <div class="field-grid" style="margin-top:20px">
@@ -1236,6 +1273,7 @@ let tasks=[];
 let editingId=null;
 let modalFiles=[];
 let modalChecklist=[];
+let modalItems=[];
 let modalUrgency='sin';
 
 const $=id=>document.getElementById(id);
@@ -1917,6 +1955,16 @@ function taskRow(t){
         ? (t.descHtml&&stripHtml(t.descHtml)?`<div class="task-fulldesc">${sanitize(t.descHtml)}</div>`:'')
         : (snippet?`<div class="task-snippet">${esc(snippet)}</div>`:'')}
       <div class="task-subs" data-subs></div>
+      ${((denseInfo||focusedTask===t.id)&&(t.items&&t.items.length))?(()=>{
+        const pend=t.items.filter(i=>!i.done);
+        const done=t.items.filter(i=>i.done);
+        const orden=[...pend,...done];
+        const filas=orden.map(it=>{
+          const fecha=it.fecha?`<span class="ci-date">${fmtDate(it.fecha)}</span>`:'';
+          return `<div class="card-item${it.done?' done':''}"><span class="ci-check">${it.done?'✓':'○'}</span><span class="ci-text">${esc(it.text||'')}</span>${fecha}</div>`;
+        }).join('');
+        return `<div class="card-items">${filas}</div>`;
+      })():''}
     </div>
     <div class="task-side">
       ${(t.section==='eventos'&&t.fechaEntregas)?(()=>{
@@ -2488,6 +2536,87 @@ function addCheckItem(refocus=true){
   renderChecklist();scheduleSave(0);
   if(refocus)$('newCheckItem').focus();
 }
+
+/* ============ Ítems (lista propia con fecha y orden manual) ============ */
+function ordenarItems(){
+  const pend=modalItems.filter(i=>!i.done);
+  const done=modalItems.filter(i=>i.done);
+  modalItems=[...pend,...done];
+}
+function renderItems(){
+  ordenarItems();
+  const box=$('itemsList');box.innerHTML='';
+  const done=modalItems.filter(i=>i.done).length;
+  $('itemsProgress').textContent=modalItems.length?`${done}/${modalItems.length}`:'';
+  $('addItemRow').style.display=editMode?'':'none';
+  if(!modalItems.length){
+    box.innerHTML=`<div class="items-empty">${editMode?'Sumá ítems: cada uno puede llevar una fecha y los ordenás arrastrando.':'Sin ítems.'}</div>`;
+    return;
+  }
+  modalItems.forEach((it,i)=>{
+    const row=document.createElement('div');
+    row.className='item-row'+(it.done?' done':'');
+    const pendiente=!it.done;
+    row.draggable=editMode&&pendiente;
+    const drag=document.createElement('span');
+    drag.className='item-drag';drag.textContent='⠿';
+    drag.style.visibility=(editMode&&pendiente)?'visible':'hidden';
+    row.appendChild(drag);
+    const cb=document.createElement('input');
+    cb.type='checkbox';cb.className='item-check';cb.checked=!!it.done;
+    cb.addEventListener('change',async()=>{
+      it.done=cb.checked;
+      if(editMode){renderItems();scheduleSave(0);}
+      else{
+        const t=tasks.find(x=>x.id===editingId);
+        if(t){ordenarItems();t.items=JSON.parse(JSON.stringify(modalItems));await persist(t);}
+        renderItems();render();
+      }
+    });
+    row.appendChild(cb);
+    const txt=document.createElement('input');
+    txt.className='item-text';txt.value=it.text||'';txt.readOnly=!editMode;txt.placeholder='Ítem…';
+    if(editMode)txt.addEventListener('input',()=>{it.text=txt.value;scheduleSave();});
+    row.appendChild(txt);
+    const fecha=document.createElement('input');
+    fecha.type='date';fecha.className='item-date';fecha.value=it.fecha||'';fecha.disabled=!editMode;
+    if(editMode)fecha.addEventListener('change',()=>{it.fecha=fecha.value;scheduleSave(0);});
+    row.appendChild(fecha);
+    if(editMode){
+      const del=document.createElement('button');
+      del.className='item-del';del.title='Quitar';del.textContent='✕';
+      del.addEventListener('click',()=>{modalItems.splice(i,1);renderItems();scheduleSave(0);});
+      row.appendChild(del);
+    }
+    if(editMode&&pendiente){
+      row.addEventListener('dragstart',e=>{row.classList.add('dragging');e.dataTransfer.setData('text/plain',i);});
+      row.addEventListener('dragend',()=>row.classList.remove('dragging'));
+      row.addEventListener('dragover',e=>e.preventDefault());
+      row.addEventListener('drop',e=>{
+        e.preventDefault();
+        const from=+e.dataTransfer.getData('text/plain'),to=i;
+        if(from===to||modalItems[from].done||modalItems[to].done)return;
+        const moved=modalItems.splice(from,1)[0];
+        modalItems.splice(to,0,moved);
+        renderItems();scheduleSave(0);
+      });
+    }
+    box.appendChild(row);
+  });
+}
+function addItem(refocus=true){
+  const v=$('newItem').value.trim();
+  if(!v)return;
+  const idx=modalItems.findIndex(i=>i.done);
+  const nuevo={id:uid(),text:v,done:false,fecha:''};
+  if(idx===-1)modalItems.push(nuevo); else modalItems.splice(idx,0,nuevo);
+  $('newItem').value='';
+  renderItems();scheduleSave(0);
+  if(refocus)$('newItem').focus();
+}
+$('btnAddItem').addEventListener('click',()=>addItem());
+$('newItem').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addItem();}});
+$('newItem').addEventListener('blur',()=>addItem(false));
 document.addEventListener('DOMContentLoaded',()=>{});
 
 /* ============ Adjuntos ============ */
@@ -2610,6 +2739,7 @@ function setEditMode(on){
   updateUndoBtn();
   renderFiles();
   renderChecklist();
+  renderItems();
   if(!on)deselectImg();
 }
 $('btnEdit').addEventListener('click',()=>{
@@ -2651,7 +2781,9 @@ function fillForm(t){
   editor().innerHTML=sanitize(t.descHtml||'');
   modalFiles=JSON.parse(JSON.stringify(t.files||[]));
   modalChecklist=JSON.parse(JSON.stringify(t.checklist||[]));
+  modalItems=JSON.parse(JSON.stringify(t.items||[]));
   renderChecklist();
+  renderItems();
   setUrgency(t.urgencia||'sin');
   updateEntregaLabel();
 }
@@ -2724,6 +2856,7 @@ async function autoSave(){
     urgencia:modalUrgency,tag:$('fTag').value.trim(),
     descHtml:sanitize(editor().innerHTML),files:modalFiles,
     checklist:JSON.parse(JSON.stringify(modalChecklist)),
+    items:JSON.parse(JSON.stringify(modalItems)),
   });
   if(prevStr!==null&&prevStr===JSON.stringify(t))return; // sin cambios reales
   if(creating){
