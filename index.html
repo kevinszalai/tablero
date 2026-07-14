@@ -217,6 +217,78 @@ main{max-width:1180px;margin:0 auto;padding:28px 20px}
 .note-card .note-del:hover{color:#C01D44;background:#FDEDF1}
 .notes-empty{grid-column:1/-1;border:1.5px dashed var(--line);border-radius:var(--radius);
   padding:40px;text-align:center;color:var(--ink-soft);font-size:14px}
+
+/* ---------- Medios ---------- */
+#mediosView{max-width:1180px;margin:0 auto;padding:24px 20px}
+.medios-alerts{display:flex;flex-direction:column;gap:8px;margin-bottom:18px}
+.medio-alert{
+  display:flex;align-items:center;gap:10px;
+  border-radius:11px;padding:11px 15px;font-size:13.5px;font-weight:500;cursor:pointer;
+  background:#FFF8E6;border:1px solid #F0DDA0;color:#8A6400;
+}
+.medio-alert.hot{background:#FDEDF1;border-color:#F6C3D0;color:#C01D44}
+.medio-alert.especial{background:#EFE7FF;border-color:#D4C2F5;color:#5E35B1}
+.medio-alert .ma-when{margin-left:auto;font-weight:700;font-size:12.5px}
+.medios-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.medio-card{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:16px 17px;cursor:pointer;position:relative;
+  display:flex;flex-direction:column;border-top:3px solid var(--cyan,#00C4DF);transition:transform .12s,box-shadow .15s;
+}
+.medio-card:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(22,33,46,.12)}
+.medio-card h3{font-family:'Space Grotesk';font-size:16px;font-weight:700;margin-bottom:4px;overflow-wrap:anywhere}
+.medio-card .medio-notas{font-size:12px;color:var(--ink-soft);margin-bottom:10px;overflow-wrap:anywhere}
+.medio-card .medio-next{font-size:12.5px;color:var(--ink);margin-top:auto;padding-top:8px;border-top:1px solid var(--line)}
+.medio-card .medio-next.pronto{color:#C01D44;font-weight:600}
+.medio-card .medio-next.esp{color:#5E35B1;font-weight:600}
+.medio-card .medio-count{position:absolute;top:14px;right:14px;font-size:11px;color:var(--ink-soft);background:var(--bg);border-radius:99px;padding:2px 9px}
+.medio-card .medio-pend-tag{font-size:11.5px;font-weight:600;color:var(--teal);background:#E6F5F7;border-radius:6px;padding:2px 8px;align-self:flex-start;margin-bottom:8px}
+.medio-card .medio-del{position:absolute;bottom:12px;right:12px;border:none;background:none;cursor:pointer;color:#C8D1DA;font-size:14px;padding:4px 6px;border-radius:6px;opacity:0;transition:opacity .12s}
+.medio-card:hover .medio-del{opacity:1}
+.medio-card .medio-del:hover{color:#C01D44;background:#FDEDF1}
+/* editor de salidas */
+.salida-row{display:flex;align-items:center;gap:9px;border:1px solid var(--line);border-radius:10px;padding:8px 11px;margin-bottom:8px;background:var(--bg);flex-wrap:wrap}
+.salida-row.especial{background:#F6F1FF;border-color:#D4C2F5}
+.salida-row .sr-date{border:1px solid var(--line);border-radius:8px;padding:6px 9px;font:inherit;font-size:13px;background:#fff}
+.salida-row .sr-label{flex:1;min-width:80px;font-size:12.5px;color:var(--ink-soft)}
+.salida-row .sr-esp{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;cursor:pointer;color:var(--ink-soft);border:1px solid var(--line);border-radius:99px;padding:4px 10px;background:#fff}
+.salida-row .sr-esp.on{background:#EFE7FF;border-color:#D4C2F5;color:#5E35B1}
+.salida-row .sr-del{border:none;background:none;cursor:pointer;color:#C8D1DA;font-size:14px;padding:4px 6px;border-radius:6px}
+.salida-row .sr-del:hover{color:#C01D44;background:#FDEDF1}
+.salida-esp-tag{font-size:10.5px;font-weight:700;color:#5E35B1;background:#EFE7FF;border-radius:5px;padding:1px 7px}
+.add-medio-row{display:flex;gap:9px;align-items:center;margin-top:6px}
+.add-medio-row input{border:1px solid var(--line);border-radius:9px;padding:8px 11px;font:inherit;font-size:13px}
+.salidas-empty{color:var(--ink-soft);font-size:12.5px;padding:8px 2px}
+.salidas-import{display:flex;gap:8px;margin-top:9px;flex-wrap:wrap}
+.salidas-import .btn{padding:6px 11px;font-size:12px}
+/* salida importante */
+.salida-row.importante{background:#FFF3C9;border-color:#EFD98F}
+.salida-row.importante.especial{background:#F3EDFF;border-color:#D4C2F5;box-shadow:inset 3px 0 0 #D9A400}
+.salida-row .sr-imp{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;cursor:pointer;color:var(--ink-soft);border:1px solid var(--line);border-radius:99px;padding:4px 10px;background:#fff}
+.salida-row .sr-imp.on{background:#FFF3C9;border-color:#EFD98F;color:#8A6400}
+.salida-nota{
+  flex-basis:100%;border:1px solid var(--line);border-radius:8px;padding:6px 9px;
+  font:inherit;font-size:12.5px;background:#fff;color:var(--ink);margin-top:2px;
+}
+.salida-nota::placeholder{color:var(--ink-soft);opacity:.7}
+.salida-imp-tag{font-size:10.5px;font-weight:700;color:#8A6400;background:#FFF3C9;border-radius:5px;padding:1px 7px}
+/* vista propia del medio */
+#medioView{max-width:1180px;margin:0 auto;padding:24px 20px}
+.medio-title-input{flex:1;font-family:'Space Grotesk';font-size:22px;font-weight:700;border:none;background:none;color:var(--ink);padding:4px 6px;border-radius:8px}
+.medio-title-input:focus{outline:none;background:var(--bg)}
+.medio-detail{margin-top:8px}
+.medio-cols{display:grid;grid-template-columns:1fr 1fr;gap:26px}
+@media(max-width:760px){.medio-cols{grid-template-columns:1fr}}
+.medio-sec{min-width:0}
+.mpend-row{display:flex;align-items:center;gap:9px;border:1px solid var(--line);border-radius:10px;padding:8px 11px;margin-bottom:7px;background:var(--bg)}
+.mpend-row.done{opacity:.55}
+.mpend-row.done .mp-text{text-decoration:line-through;color:var(--ink-soft)}
+.mp-check{width:18px;height:18px;flex-shrink:0;cursor:pointer;accent-color:var(--teal)}
+.mp-text{flex:1;min-width:0;border:none;background:none;font:inherit;font-size:13.5px;color:var(--ink);padding:2px}
+.mp-text:focus{outline:none}
+.mp-del{border:none;background:none;cursor:pointer;color:#C8D1DA;font-size:14px;padding:4px 6px;border-radius:6px}
+.mp-del:hover{color:#C01D44;background:#FDEDF1}
+.mpend-empty{color:var(--ink-soft);font-size:12.5px;padding:8px 2px}
 .mention-popup{
   position:absolute;z-index:120;background:var(--surface);
   border:1px solid var(--line);border-radius:11px;box-shadow:0 12px 32px rgba(13,23,35,.18);
@@ -794,7 +866,7 @@ body.focus-mode .sub-pill.sub-add{text-align:center;justify-content:center}
     <div class="brand-mark">KS</div>
     <div>
       <h1>Tablero de Tareas</h1>
-      <small>Seguimiento diario · Marketing · v5.3</small>
+      <small>Seguimiento diario · Marketing · v5.6</small>
     </div>
     <span class="sync-pill" id="syncPill" title="">● Local</span>
   </div>
@@ -806,6 +878,7 @@ body.focus-mode .sub-pill.sub-add{text-align:center;justify-content:center}
       <div class="menu-dropdown" id="qlMoreMenu"></div>
     </div>
     <button class="btn btn-ghost" id="qlEdit" title="Administrar enlaces">🔗</button>
+    <button class="btn btn-ghost" id="btnMedios">📰 Medios</button>
     <button class="btn btn-ghost" id="btnNotes">🗒️ Notas para calls</button>
     <button class="btn btn-primary" id="btnNew">＋ Nueva tarea</button>
     <div class="menu-wrap">
@@ -843,6 +916,82 @@ body.focus-mode .sub-pill.sub-add{text-align:center;justify-content:center}
 </div>
 
 <!-- Vista: Notas para calls -->
+<!-- Vista: Medios -->
+<div id="mediosView" style="display:none">
+  <div class="notes-head">
+    <button class="btn btn-ghost" id="mediosBack">‹ Volver al tablero</button>
+    <h2 class="notes-h2">📰 Medios</h2>
+    <button class="btn btn-primary" id="medioNew">＋ Nuevo medio</button>
+  </div>
+  <div class="medios-alerts" id="mediosAlerts"></div>
+  <div class="medios-grid" id="mediosGrid"></div>
+</div>
+
+<!-- Editor de medio -->
+<!-- Vista propia de un medio -->
+<div id="medioView" style="display:none">
+  <div class="notes-head">
+    <button class="btn btn-ghost" id="medioBack">‹ Volver a Medios</button>
+    <input type="text" class="medio-title-input" id="medioName" placeholder="Nombre del medio">
+    <button class="btn btn-danger" id="medioDelete">🗑 Eliminar</button>
+  </div>
+
+  <div class="medio-detail">
+    <div class="field" style="margin-bottom:22px">
+      <label>Notas del medio <small style="font-weight:400;text-transform:none">(contacto, formato, facturación…)</small></label>
+      <input type="text" id="medioNotas" placeholder="Ej: contacto Juan, arte 1080x1080, factura a 30 días">
+    </div>
+
+    <div class="medio-cols">
+      <section class="medio-sec">
+        <div class="block-head">Salidas <span class="check-progress" id="salidasCount"></span></div>
+        <p class="panel-note" style="margin-top:0">Cargá las fechas de salida. Aviso 7 días antes para enviar el arte. Marcá <b>★</b> las especiales.</p>
+        <div id="salidasList"></div>
+        <div class="add-medio-row">
+          <input type="date" id="newSalida">
+          <button class="btn btn-ghost" id="btnAddSalida">＋ Agregar salida</button>
+        </div>
+        <div class="salidas-import">
+          <button class="btn btn-ghost" id="btnImportSalidas">📊 Subir Excel</button>
+          <button class="btn btn-ghost" id="btnTplSalidas" title="Descargar planilla de ejemplo">⬇ Planilla modelo</button>
+          <input type="file" id="salidasFile" accept=".xlsx,.xls,.csv" hidden>
+        </div>
+      </section>
+
+      <section class="medio-sec">
+        <div class="block-head">Pendientes <span class="check-progress" id="mPendCount"></span></div>
+        <div id="mPendList"></div>
+        <div class="add-medio-row">
+          <input type="text" id="newMPend" placeholder="Nuevo pendiente…">
+          <button class="btn btn-ghost" id="btnAddMPend">＋</button>
+        </div>
+      </section>
+    </div>
+
+    <section class="medio-sec" style="margin-top:22px">
+      <div class="block-head">Notas</div>
+      <div class="editor-toolbar">
+        <button class="fmt-btn" type="button" data-mcmd="bold" title="Negrita"><b>B</b></button>
+        <button class="fmt-btn" type="button" data-mcmd="insertUnorderedList" title="Lista">•≡</button>
+        <button class="fmt-btn" type="button" data-mcmd="insertOrderedList" title="Lista numerada">1≡</button>
+        <span class="fmt-sep"></span>
+        <span class="fmt-label">Resaltar</span>
+        <button class="fmt-btn sw" type="button" data-mhl="#FFF1A8" style="background:#FFF1A8"></button>
+        <button class="fmt-btn sw" type="button" data-mhl="#C9F2D0" style="background:#C9F2D0"></button>
+        <button class="fmt-btn sw" type="button" data-mhl="#CDEFFA" style="background:#CDEFFA"></button>
+        <span class="fmt-sep"></span>
+        <span class="fmt-label">Color</span>
+        <button class="fmt-btn sw" type="button" data-mfc="#C01D44" style="background:#C01D44"></button>
+        <button class="fmt-btn sw" type="button" data-mfc="#00528F" style="background:#00528F"></button>
+        <button class="fmt-btn sw" type="button" data-mfc="#008091" style="background:#008091"></button>
+        <span class="fmt-sep"></span>
+        <button class="fmt-btn" type="button" data-mcmd="removeFormat" title="Quitar formato">✕</button>
+      </div>
+      <div class="rich-editor" id="medioEditor" contenteditable="true" style="min-height:180px" data-placeholder="Notas largas del medio: histórico, condiciones, lo que quieras…"></div>
+    </section>
+  </div>
+</div>
+
 <div id="notesView" style="display:none">
   <div class="notes-head">
     <button class="btn btn-ghost" id="notesBack">‹ Volver al tablero</button>
@@ -1216,12 +1365,13 @@ const DB_NAME='tableroKS', STORE='tasks';
 let db;
 function openDB(){
   return new Promise((res,rej)=>{
-    const rq=indexedDB.open(DB_NAME,3);
+    const rq=indexedDB.open(DB_NAME,4);
     rq.onupgradeneeded=e=>{
       const d=e.target.result;
       if(!d.objectStoreNames.contains(STORE)) d.createObjectStore(STORE,{keyPath:'id'});
       if(!d.objectStoreNames.contains('meta')) d.createObjectStore('meta',{keyPath:'key'});
       if(!d.objectStoreNames.contains('notes')) d.createObjectStore('notes',{keyPath:'id'});
+      if(!d.objectStoreNames.contains('medios')) d.createObjectStore('medios',{keyPath:'id'});
     };
     rq.onsuccess=e=>{db=e.target.result;res()};
     rq.onerror=()=>rej(rq.error);
@@ -1274,6 +1424,25 @@ function dbNotePut(n){
 function dbNoteDel(id){
   return new Promise((res,rej)=>{
     const rq=db.transaction('notes','readwrite').objectStore('notes').delete(id);
+    rq.onsuccess=res;rq.onerror=()=>rej(rq.error);
+  });
+}
+function dbMediosAll(){
+  return new Promise((res,rej)=>{
+    try{const rq=db.transaction('medios').objectStore('medios').getAll();
+      rq.onsuccess=()=>res(rq.result);rq.onerror=()=>rej(rq.error);
+    }catch(e){res([]);}
+  });
+}
+function dbMedioPut(m){
+  return new Promise((res,rej)=>{
+    const rq=db.transaction('medios','readwrite').objectStore('medios').put(m);
+    rq.onsuccess=res;rq.onerror=()=>rej(rq.error);
+  });
+}
+function dbMedioDel(id){
+  return new Promise((res,rej)=>{
+    const rq=db.transaction('medios','readwrite').objectStore('medios').delete(id);
     rq.onsuccess=res;rq.onerror=()=>rej(rq.error);
   });
 }
@@ -1607,6 +1776,9 @@ function renderSummary(){
   if(evSemana.length)pill('esta semana',evSemana.length,'warn',()=>$('btnCal').click());
   pill('activas',activas.length,'',()=>setSec('activas'));
   pill(ev45.length===1?'evento próximo':'eventos próximos',ev45.length,'',()=>setSec('eventos'));
+  // salidas de medios dentro de 7 días
+  const artes=(typeof proximasSalidas==='function')?proximasSalidas(AVISO_ARTE_DIAS):[];
+  if(artes.length)pill(artes.length===1?'arte por enviar':'artes por enviar',artes.length,'warn',()=>openMediosView());
 
   // botón de activar avisos (solo si no están concedidos aún)
   if('Notification' in window && Notification.permission==='default'){
@@ -1676,10 +1848,13 @@ function mostrarPopDiario(){
   try{ultimo=localStorage.getItem('popDiario');}catch(e){}
   if(ultimo===hoyStr)return; // ya se mostró hoy
   const alertas=alertasEventos();
-  if(!alertas.length)return;
+  // sumar salidas de medios dentro de 7 días (enviar arte)
+  const salidasMedios=(typeof proximasSalidas==='function')?proximasSalidas(AVISO_ARTE_DIAS):[];
+  if(!alertas.length&&!salidasMedios.length)return;
   try{localStorage.setItem('popDiario',hoyStr);}catch(e){}
   const box=$('dailyList');box.innerHTML='';
-  $('dailyDate').textContent=new Date().toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'})+' · '+alertas.length+' alerta'+(alertas.length>1?'s':'');
+  const total=alertas.length+salidasMedios.length;
+  $('dailyDate').textContent=new Date().toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'})+' · '+total+' alerta'+(total>1?'s':'');
   alertas.forEach(a=>{
     const row=document.createElement('div');row.className='daily-item';
     row.innerHTML=`<span class="di-ico">${a.ico}</span>
@@ -1688,6 +1863,18 @@ function mostrarPopDiario(){
         <div class="di-state ${a.rojo?'rojo':'amber'}">${a.txt}</div>
       </div>`;
     row.addEventListener('click',()=>{$('dailyOverlay').classList.remove('open');openModal(a.t.id);});
+    box.appendChild(row);
+  });
+  salidasMedios.forEach(p=>{
+    const row=document.createElement('div');row.className='daily-item';
+    const cuando=p.dias===0?'Hoy':p.dias===1?'Mañana':`En ${p.dias} días`;
+    const marcas=[p.especial?'especial':'',p.importante?'importante':''].filter(Boolean).join(' · ');
+    row.innerHTML=`<span class="di-ico">${p.especial?'★':p.importante?'⚡':'📰'}</span>
+      <div class="di-main">
+        <div class="di-title">Enviar arte a ${esc(p.medio)}${marcas?` (${marcas})`:''}</div>
+        <div class="di-state ${p.dias<=3||p.especial||p.importante?'rojo':'amber'}">${cuando} · sale ${fmtDate(p.fecha)}${p.nota?' — '+esc(p.nota):''}</div>
+      </div>`;
+    row.addEventListener('click',()=>{$('dailyOverlay').classList.remove('open');openMediosView();});
     box.appendChild(row);
   });
   $('dailyOverlay').classList.add('open');
@@ -3369,7 +3556,8 @@ $('btnClose').addEventListener('click',closeModal);
 $('overlay').addEventListener('click',e=>{if(e.target===$('overlay'))closeModal();});
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){
-    if($('qlOverlay').classList.contains('open'))document.querySelector('[data-close-ql]').click();
+    if($('medioView').style.display==='block')closeMedio();
+    else if($('qlOverlay').classList.contains('open'))document.querySelector('[data-close-ql]').click();
     else if($('qlMoreMenu').classList.contains('open'))$('qlMoreMenu').classList.remove('open');
     else if($('noteOverlay').classList.contains('open')){closeNote();renderNotes();}
     else if($('dailyOverlay').classList.contains('open'))$('dailyOverlay').classList.remove('open');
@@ -3943,6 +4131,389 @@ $('noteEditor').addEventListener('click',e=>{
   }
 });
 
+/* ============ Medios ============ */
+let medios=[];
+let medioRemote=null;
+let editingMedio=null;
+let medioSaveTimer=null;
+const AVISO_ARTE_DIAS=7;
+
+function initMediosRemote(){if(remote)medioRemote=remote.parent.collection('medios');}
+async function loadMedios(){
+  medios=await dbMediosAll();
+  if(medioRemote){
+    try{
+      const snap=await medioRemote.get();
+      const remoteIds=new Set(snap.docs.map(d=>d.id));
+      for(const m of medios){if(!remoteIds.has(m.id))medioRemote.doc(m.id).set(m).catch(()=>{});}
+      medioRemote.onSnapshot(sn=>{
+        let changed=false;
+        sn.docChanges().forEach(ch=>{
+          if(ch.doc.metadata.hasPendingWrites)return;
+          const id=ch.doc.id;if(editingMedio===id)return;
+          if(ch.type==='removed'){if(medios.some(x=>x.id===id)){medios=medios.filter(x=>x.id!==id);dbMedioDel(id);changed=true;}return;}
+          const data=ch.doc.data();const local=medios.find(x=>x.id===id);
+          if(local)Object.assign(local,data);else medios.push(data);
+          dbMedioPut(data);changed=true;
+        });
+        if(changed){if($('mediosView').style.display!=='none')renderMedios();renderMediosAlerts();}
+      },()=>{});
+    }catch(e){}
+  }
+}
+async function persistMedio(m){await dbMedioPut(m);if(medioRemote)medioRemote.doc(m.id).set(m).catch(()=>{});}
+async function removeMedio(id){await dbMedioDel(id);if(medioRemote)medioRemote.doc(id).delete().catch(()=>{});}
+
+// próximas salidas de todos los medios (futuras o de hoy), ordenadas
+function proximasSalidas(diasMax){
+  const hoy=new Date();hoy.setHours(0,0,0,0);
+  const out=[];
+  medios.forEach(m=>{
+    (m.salidas||[]).forEach(sal=>{
+      if(!sal.fecha)return;
+      const f=new Date(sal.fecha+'T00:00:00');
+      const dias=Math.round((f-hoy)/(24*3600*1000));
+      if(dias>=0&&(diasMax==null||dias<=diasMax)){
+        out.push({medio:m.name||'(sin nombre)',medioId:m.id,fecha:sal.fecha,dias,especial:!!sal.especial,importante:!!sal.importante,nota:sal.nota||''});
+      }
+    });
+  });
+  return out.sort((a,b)=>a.dias-b.dias);
+}
+
+function openMediosView(){
+  $('medioView').style.display='none';
+  $('mediosView').style.display='block';
+  document.querySelector('main').style.display='none';
+  document.querySelector('.summary-bar').style.display='none';
+  document.querySelector('.filter-bar').style.display='none';
+  const sb=$('backupReminder');if(sb)sb.style.display='none';
+  $('btnMedios').innerHTML='‹ Volver al tablero';
+  renderMedios();
+}
+function closeMediosView(){
+  $('mediosView').style.display='none';
+  $('medioView').style.display='none';
+  document.querySelector('main').style.display='';
+  $('btnMedios').innerHTML='📰 Medios';
+  render();
+}
+function enMedios(){return $('mediosView').style.display==='block'||$('medioView').style.display==='block';}
+$('btnMedios').addEventListener('click',()=>{
+  if(enMedios()){
+    if($('medioView').style.display==='block'&&medioSaveTimer){clearTimeout(medioSaveTimer);saveMedio();}
+    editingMedio=null;
+    closeMediosView();
+  }else openMediosView();
+});
+$('mediosBack').addEventListener('click',closeMediosView);
+
+function renderMediosAlerts(){
+  const box=$('mediosAlerts');if(!box)return;box.innerHTML='';
+  // avisos: salidas dentro de 7 días (enviar arte)
+  const prox=proximasSalidas(AVISO_ARTE_DIAS);
+  if(!prox.length)return;
+  prox.forEach(p=>{
+    const div=document.createElement('div');
+    const hot=p.dias<=3;
+    div.className='medio-alert'+(p.especial?' especial':hot?' hot':'');
+    const cuando=p.dias===0?'¡Hoy!':p.dias===1?'Mañana':`En ${p.dias} días`;
+    const ico=p.especial?'★ ':p.importante?'⚡ ':'📰 ';
+    const marcas=[p.especial?'edición especial':'',p.importante?'importante':''].filter(Boolean).join(' · ');
+    div.innerHTML=`<span>${ico}Enviar arte a <b>${esc(p.medio)}</b>${marcas?` (${marcas})`:''} · sale ${fmtDate(p.fecha)}${p.nota?` — ${esc(p.nota)}`:''}</span><span class="ma-when">${cuando}</span>`;
+    div.addEventListener('click',()=>{if(p.medioId)openMedio(p.medioId);});
+    box.appendChild(div);
+  });
+}
+
+function renderMedios(){
+  renderMediosAlerts();
+  const grid=$('mediosGrid');grid.innerHTML='';
+  if(!medios.length){
+    grid.innerHTML='<div class="notes-empty">No hay medios cargados. Sumá uno con “＋ Nuevo medio” (Ladevi, Report, El Diario del Turismo…).</div>';
+    return;
+  }
+  const hoy=new Date();hoy.setHours(0,0,0,0);
+  const ordenados=medios.slice().sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  ordenados.forEach(m=>{
+    const card=document.createElement('div');card.className='medio-card';
+    // próxima salida
+    const futuras=(m.salidas||[]).filter(s=>s.fecha).map(s=>({...s,d:Math.round((new Date(s.fecha+'T00:00:00')-hoy)/(24*3600*1000))})).filter(s=>s.d>=0).sort((a,b)=>a.d-b.d);
+    const next=futuras[0];
+    let nextTxt='Sin salidas próximas',nextCls='';
+    if(next){
+      const cuando=next.d===0?'hoy':next.d===1?'mañana':`en ${next.d} días`;
+      nextTxt=`Próxima salida: ${fmtDate(next.fecha)} (${cuando})${next.especial?' ★ especial':''}`;
+      if(next.especial)nextCls='esp'; else if(next.d<=AVISO_ARTE_DIAS)nextCls='pronto';
+    }
+    const pendAbiertos=(m.pendientes||[]).filter(p=>!p.done).length;
+    card.innerHTML=`
+      <button class="medio-del" title="Eliminar">✕</button>
+      <span class="medio-count">${(m.salidas||[]).length} salida${(m.salidas||[]).length===1?'':'s'}</span>
+      <h3>${esc(m.name)||'(sin nombre)'}</h3>
+      ${m.notas?`<div class="medio-notas">${esc(m.notas)}</div>`:''}
+      ${pendAbiertos?`<div class="medio-pend-tag">✓ ${pendAbiertos} pendiente${pendAbiertos===1?'':'s'}</div>`:''}
+      <div class="medio-next ${nextCls}">${nextTxt}</div>`;
+    card.addEventListener('click',e=>{if(e.target.closest('.medio-del'))return;openMedio(m.id);});
+    card.querySelector('.medio-del').addEventListener('click',async()=>{
+      if(!confirm('¿Eliminar este medio y sus salidas?'))return;
+      await removeMedio(m.id);medios=medios.filter(x=>x.id!==m.id);renderMedios();toast('Medio eliminado');
+    });
+    grid.appendChild(card);
+  });
+}
+$('medioNew').addEventListener('click',()=>openMedio(null));
+
+let medioSalidas=[];
+let medioPend=[];
+function openMedio(id){
+  editingMedio=id;
+  let m;
+  if(id)m=medios.find(x=>x.id===id);
+  else{m={id:uid(),name:'',notas:'',salidas:[],pendientes:[],notasHtml:'',createdAt:Date.now()};medios.push(m);editingMedio=m.id;}
+  $('medioName').value=m.name||'';
+  $('medioNotas').value=m.notas||'';
+  medioSalidas=JSON.parse(JSON.stringify(m.salidas||[]));
+  medioPend=JSON.parse(JSON.stringify(m.pendientes||[]));
+  $('medioEditor').innerHTML=sanitize(m.notasHtml||'');
+  renderSalidas();
+  renderMPend();
+  // mostrar la vista del medio (oculta la de medios)
+  $('mediosView').style.display='none';
+  $('medioView').style.display='block';
+  window.scrollTo({top:0});
+  if(!id)setTimeout(()=>$('medioName').focus(),60);
+}
+function renderSalidas(){
+  medioSalidas.sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
+  const box=$('salidasList');box.innerHTML='';
+  $('salidasCount').textContent=medioSalidas.length||'';
+  if(!medioSalidas.length){
+    box.innerHTML='<div class="salidas-empty">Sin salidas cargadas. Agregá la primera abajo.</div>';
+    return;
+  }
+  const hoy=new Date();hoy.setHours(0,0,0,0);
+  medioSalidas.forEach((sal,i)=>{
+    const row=document.createElement('div');
+    row.className='salida-row'+(sal.especial?' especial':'')+(sal.importante?' importante':'');
+    const d=sal.fecha?Math.round((new Date(sal.fecha+'T00:00:00')-hoy)/(24*3600*1000)):null;
+    const info=d===null?'':d<0?'pasó':d===0?'hoy':d===1?'mañana':`en ${d} días`;
+    const dfecha=document.createElement('input');dfecha.type='date';dfecha.className='sr-date';dfecha.value=sal.fecha||'';
+    dfecha.addEventListener('change',()=>{sal.fecha=dfecha.value;scheduleMedioSave();renderSalidas();});
+    const lbl=document.createElement('span');lbl.className='sr-label';
+    lbl.innerHTML=info
+      +(sal.especial?' <span class="salida-esp-tag">ESPECIAL</span>':'')
+      +(sal.importante?' <span class="salida-imp-tag">IMPORTANTE</span>':'');
+    const esp=document.createElement('button');esp.className='sr-esp'+(sal.especial?' on':'');esp.innerHTML='★ especial';
+    esp.addEventListener('click',()=>{sal.especial=!sal.especial;scheduleMedioSave();renderSalidas();});
+    const imp=document.createElement('button');imp.className='sr-imp'+(sal.importante?' on':'');imp.innerHTML='⚡ importante';
+    imp.title='Destacar esta salida y agregarle una nota';
+    imp.addEventListener('click',()=>{sal.importante=!sal.importante;scheduleMedioSave();renderSalidas();});
+    const del=document.createElement('button');del.className='sr-del';del.textContent='✕';del.title='Quitar';
+    del.addEventListener('click',()=>{medioSalidas.splice(i,1);scheduleMedioSave();renderSalidas();});
+    row.appendChild(dfecha);row.appendChild(lbl);row.appendChild(imp);row.appendChild(esp);row.appendChild(del);
+    // nota de la salida: siempre disponible, se muestra si está marcada importante o ya tiene texto
+    if(sal.importante||sal.nota){
+      const nota=document.createElement('input');
+      nota.className='salida-nota';nota.value=sal.nota||'';
+      nota.placeholder='¿Qué tiene de importante? (ej: doble página, nota especial de Zurich…)';
+      nota.addEventListener('input',()=>{sal.nota=nota.value;scheduleMedioSave();});
+      row.appendChild(nota);
+    }
+    box.appendChild(row);
+  });
+}
+$('btnAddSalida').addEventListener('click',()=>{
+  const f=$('newSalida').value;
+  if(!f){toast('Elegí una fecha primero');return;}
+  medioSalidas.push({id:uid(),fecha:f,especial:false,importante:false,nota:''});
+  $('newSalida').value='';
+  scheduleMedioSave();renderSalidas();
+});
+
+/* ---- Importar salidas desde Excel ---- */
+function esSi(v){
+  if(v===true)return true;
+  const t=String(v==null?'':v).trim().toLowerCase();
+  return ['si','sí','s','x','yes','true','1','v'].includes(t);
+}
+function aFechaISO(v){
+  if(v==null||v==='')return '';
+  // Date real (SheetJS con cellDates)
+  if(v instanceof Date&&!isNaN(v)){
+    return v.getFullYear()+'-'+String(v.getMonth()+1).padStart(2,'0')+'-'+String(v.getDate()).padStart(2,'0');
+  }
+  // número serial de Excel
+  if(typeof v==='number'&&isFinite(v)){
+    const d=new Date(Math.round((v-25569)*86400*1000));
+    if(!isNaN(d))return d.toISOString().slice(0,10);
+  }
+  const t=String(v).trim();
+  if(/^\d{4}-\d{2}-\d{2}/.test(t))return t.slice(0,10);
+  // dd/mm/yyyy o dd-mm-yy
+  const m=t.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
+  if(m){
+    let[,d,mes,a]=m;
+    if(a.length===2)a='20'+a;
+    return a+'-'+String(mes).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+  }
+  return '';
+}
+function importarSalidas(arrayBuffer){
+  const wb=XLSX.read(arrayBuffer,{type:'array',cellDates:true});
+  const ws=wb.Sheets[wb.SheetNames[0]];
+  const filas=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:''});
+  if(!filas.length)return {sumadas:0,repetidas:0,malas:0,vacio:true};
+  const norm=x=>String(x==null?'':x).trim().toLowerCase();
+  const head=filas[0].map(norm);
+  const tieneHeader=head.some(h=>['fecha','salida','fecha de salida','especial','importante','nota','detalle','observacion','observación'].includes(h));
+  let iF=0,iE=-1,iI=-1,iN=-1;
+  if(tieneHeader){
+    head.forEach((h,i)=>{
+      if(['fecha','salida','fecha de salida'].includes(h))iF=i;
+      else if(['especial','edicion especial','edición especial'].includes(h))iE=i;
+      else if(['importante','destacado'].includes(h))iI=i;
+      else if(['nota','detalle','observacion','observación','comentario'].includes(h))iN=i;
+    });
+  }
+  const cuerpo=tieneHeader?filas.slice(1):filas;
+  let sumadas=0,repetidas=0,malas=0;
+  cuerpo.forEach(fila=>{
+    if(!fila||!fila.length)return;
+    const fecha=aFechaISO(fila[iF]);
+    if(!fecha){if(String(fila[iF]||'').trim())malas++;return;}
+    if(medioSalidas.some(s=>s.fecha===fecha)){repetidas++;return;}
+    medioSalidas.push({
+      id:uid(),fecha,
+      especial:iE>=0?esSi(fila[iE]):false,
+      importante:iI>=0?esSi(fila[iI]):false,
+      nota:iN>=0?String(fila[iN]||'').trim():''
+    });
+    sumadas++;
+  });
+  scheduleMedioSave();renderSalidas();
+  return {sumadas,repetidas,malas};
+}
+$('btnImportSalidas').addEventListener('click',()=>{
+  if(typeof XLSX==='undefined'){toast('No cargó la librería de Excel. Revisá la conexión.');return;}
+  $('salidasFile').click();
+});
+$('salidasFile').addEventListener('change',e=>{
+  const f=e.target.files[0];if(!f)return;
+  e.target.value='';
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const res=importarSalidas(new Uint8Array(r.result));
+      if(res.vacio){toast('El archivo está vacío');return;}
+      let msg=`${res.sumadas} salida${res.sumadas===1?'':'s'} importada${res.sumadas===1?'':'s'}`;
+      if(res.repetidas)msg+=` · ${res.repetidas} ya estaban`;
+      if(res.malas)msg+=` · ${res.malas} sin fecha válida`;
+      toast(msg);
+    }catch(err){
+      toast('No pude leer el archivo. Probá con la planilla modelo.');
+    }
+  };
+  r.readAsArrayBuffer(f);
+});
+$('btnTplSalidas').addEventListener('click',()=>{
+  if(typeof XLSX==='undefined'){toast('No cargó la librería de Excel.');return;}
+  const hoy=new Date();
+  const d=(n)=>{const x=new Date(hoy);x.setDate(x.getDate()+n);return x.toISOString().slice(0,10);};
+  const aoa=[
+    ['Fecha','Especial','Importante','Nota'],
+    [d(15),'','','' ],
+    [d(30),'SI','','Edición aniversario'],
+    [d(45),'','SI','Doble página contratada'],
+  ];
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols']=[{wch:12},{wch:10},{wch:12},{wch:38}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Salidas');
+  XLSX.writeFile(wb,'planilla-salidas.xlsx');
+  toast('Planilla descargada');
+});
+
+// Pendientes del medio
+function renderMPend(){
+  const pend=medioPend.filter(i=>!i.done);
+  const done=medioPend.filter(i=>i.done);
+  medioPend=[...pend,...done];
+  const box=$('mPendList');box.innerHTML='';
+  $('mPendCount').textContent=medioPend.length?`${done.length}/${medioPend.length}`:'';
+  if(!medioPend.length){
+    box.innerHTML='<div class="mpend-empty">Sin pendientes. Sumá el primero abajo.</div>';
+    return;
+  }
+  medioPend.forEach((it,i)=>{
+    const row=document.createElement('div');row.className='mpend-row'+(it.done?' done':'');
+    const cb=document.createElement('input');cb.type='checkbox';cb.className='mp-check';cb.checked=!!it.done;
+    cb.addEventListener('change',()=>{it.done=cb.checked;scheduleMedioSave();renderMPend();});
+    const txt=document.createElement('input');txt.className='mp-text';txt.value=it.text||'';txt.placeholder='Pendiente…';
+    txt.addEventListener('input',()=>{it.text=txt.value;scheduleMedioSave();});
+    const del=document.createElement('button');del.className='mp-del';del.textContent='✕';del.title='Quitar';
+    del.addEventListener('click',()=>{medioPend.splice(i,1);scheduleMedioSave();renderMPend();});
+    row.appendChild(cb);row.appendChild(txt);row.appendChild(del);
+    box.appendChild(row);
+  });
+}
+function addMPend(){
+  const v=$('newMPend').value.trim();if(!v)return;
+  const idx=medioPend.findIndex(i=>i.done);
+  const nuevo={id:uid(),text:v,done:false};
+  if(idx===-1)medioPend.push(nuevo);else medioPend.splice(idx,0,nuevo);
+  $('newMPend').value='';scheduleMedioSave();renderMPend();$('newMPend').focus();
+}
+$('btnAddMPend').addEventListener('click',addMPend);
+$('newMPend').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addMPend();}});
+
+// Notas del medio (editor con formato)
+document.querySelectorAll('#medioView .fmt-btn').forEach(b=>{
+  b.addEventListener('mousedown',e=>e.preventDefault());
+  b.addEventListener('click',()=>{
+    $('medioEditor').focus();
+    try{document.execCommand('styleWithCSS',false,true);}catch(e){}
+    if(b.dataset.mcmd)document.execCommand(b.dataset.mcmd,false,null);
+    else if(b.dataset.mhl)document.execCommand('hiliteColor',false,b.dataset.mhl);
+    else if(b.dataset.mfc)document.execCommand('foreColor',false,b.dataset.mfc);
+    scheduleMedioSave();
+  });
+});
+$('medioEditor').addEventListener('input',()=>scheduleMedioSave());
+$('medioName').addEventListener('input',()=>scheduleMedioSave());
+$('medioNotas').addEventListener('input',()=>scheduleMedioSave());
+
+function scheduleMedioSave(){clearTimeout(medioSaveTimer);medioSaveTimer=setTimeout(saveMedio,400);}
+async function saveMedio(){
+  if(!editingMedio)return;
+  const m=medios.find(x=>x.id===editingMedio);if(!m)return;
+  m.name=$('medioName').value.trim();
+  m.notas=$('medioNotas').value.trim();
+  m.salidas=JSON.parse(JSON.stringify(medioSalidas));
+  m.pendientes=JSON.parse(JSON.stringify(medioPend));
+  m.notasHtml=sanitize($('medioEditor').innerHTML);
+  m.updatedAt=Date.now();
+  await persistMedio(m);
+}
+function closeMedio(){
+  if(medioSaveTimer){clearTimeout(medioSaveTimer);saveMedio();}
+  // si el medio quedó totalmente vacío, descartarlo
+  const m=medios.find(x=>x.id===editingMedio);
+  if(m&&!m.name&&!(m.salidas||[]).length&&!(m.pendientes||[]).length&&!m.notas&&!stripHtml(m.notasHtml||'')){
+    removeMedio(m.id);medios=medios.filter(x=>x.id!==m.id);
+  }
+  editingMedio=null;
+  $('medioView').style.display='none';
+  openMediosView();
+}
+$('medioBack').addEventListener('click',closeMedio);
+$('medioDelete').addEventListener('click',async()=>{
+  if(!editingMedio)return;
+  if(!confirm('¿Eliminar este medio con sus salidas, pendientes y notas?'))return;
+  await removeMedio(editingMedio);medios=medios.filter(x=>x.id!==editingMedio);
+  editingMedio=null;$('medioView').style.display='none';openMediosView();toast('Medio eliminado');
+});
+
 /* ============ Init ============ */
 /* PWA: registrar el service worker (si el navegador lo soporta) */
 if('serviceWorker' in navigator){
@@ -3962,6 +4533,8 @@ if('serviceWorker' in navigator){
   applySecNames();
   initNotesRemote();
   await loadNotes();
+  initMediosRemote();
+  await loadMedios();
   await loadQuicklinks();
   renderQuicklinks();
   render();
