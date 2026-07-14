@@ -642,8 +642,10 @@ body.focus-mode .sub-pill.sub-add{text-align:center;justify-content:center}
 .item-row.dragging{opacity:.4}
 .item-drag{cursor:grab;color:var(--ink-soft);font-size:15px;flex-shrink:0;touch-action:none}
 .item-check{width:19px;height:19px;flex-shrink:0;cursor:pointer;accent-color:var(--teal)}
-.item-text{flex:1;min-width:0;border:none;background:none;font:inherit;font-size:13.5px;color:var(--ink);padding:2px}
-.item-text:focus{outline:none}
+.item-text{flex:1;min-width:0;border:none;background:none;font:inherit;font-size:13.5px;color:var(--ink);padding:3px 4px;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere;border-radius:6px}
+.item-text:focus{outline:none;background:#fff;box-shadow:inset 0 0 0 1px var(--line)}
+.item-text[contenteditable="true"]:empty:before{content:attr(data-ph);color:var(--ink-soft);opacity:.7}
+.item-text b,.item-text strong{font-weight:700}
 .item-date{border:1px solid var(--line);border-radius:7px;padding:4px 7px;font:inherit;font-size:12px;background:#fff;color:var(--ink-soft);flex-shrink:0;width:135px}
 .item-del{border:none;background:none;cursor:pointer;color:#C8D1DA;font-size:14px;padding:4px 6px;border-radius:6px;flex-shrink:0}
 .item-del:hover{color:#C01D44;background:#FDEDF1}
@@ -656,10 +658,18 @@ body.focus-mode .sub-pill.sub-add{text-align:center;justify-content:center}
 }
 .card-item.done{opacity:.55}
 .card-item.done .ci-text{text-decoration:line-through;color:var(--ink-soft)}
-.card-item .ci-check{color:var(--teal);font-weight:700;flex-shrink:0}
+.card-item .ci-check{color:var(--teal);font-weight:700;flex-shrink:0;cursor:pointer;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;border-radius:5px}
+.card-item .ci-check:hover{background:var(--bg)}
 .card-item.done .ci-check{color:var(--ink-soft)}
-.card-item .ci-text{flex:1;min-width:0;overflow-wrap:anywhere}
+.card-item .ci-text{flex:1;min-width:0;overflow-wrap:anywhere;white-space:pre-wrap}
+.card-item .ci-text b,.card-item .ci-text strong{font-weight:700}
 .card-item .ci-date{font-size:11px;color:var(--ink-soft);flex-shrink:0;background:var(--bg);border-radius:5px;padding:1px 7px}
+.card-item-add{
+  display:flex;align-items:center;gap:8px;cursor:pointer;
+  border:1px dashed var(--line);border-radius:8px;padding:6px 10px;font-size:12.5px;color:var(--ink-soft);
+}
+.card-item-add:hover{border-color:var(--azul);color:var(--azul)}
+.card-item-add .ci-check{font-weight:700}
 .block-head .tool{
   border:1px solid var(--line);background:var(--surface);border-radius:8px;
   font:inherit;font-size:12px;font-weight:600;color:var(--ink-soft);
@@ -784,7 +794,7 @@ body.focus-mode .sub-pill.sub-add{text-align:center;justify-content:center}
     <div class="brand-mark">KS</div>
     <div>
       <h1>Tablero de Tareas</h1>
-      <small>Seguimiento diario · Marketing · v5.1</small>
+      <small>Seguimiento diario · Marketing · v5.3</small>
     </div>
     <span class="sync-pill" id="syncPill" title="">● Local</span>
   </div>
@@ -1955,15 +1965,17 @@ function taskRow(t){
         ? (t.descHtml&&stripHtml(t.descHtml)?`<div class="task-fulldesc">${sanitize(t.descHtml)}</div>`:'')
         : (snippet?`<div class="task-snippet">${esc(snippet)}</div>`:'')}
       <div class="task-subs" data-subs></div>
-      ${((denseInfo||focusedTask===t.id)&&(t.items&&t.items.length))?(()=>{
-        const pend=t.items.filter(i=>!i.done);
-        const done=t.items.filter(i=>i.done);
+      ${(denseInfo||focusedTask===t.id)?(()=>{
+        const items=t.items||[];
+        const pend=items.filter(i=>!i.done);
+        const done=items.filter(i=>i.done);
         const orden=[...pend,...done];
         const filas=orden.map(it=>{
           const fecha=it.fecha?`<span class="ci-date">${fmtDate(it.fecha)}</span>`:'';
-          return `<div class="card-item${it.done?' done':''}"><span class="ci-check">${it.done?'✓':'○'}</span><span class="ci-text">${esc(it.text||'')}</span>${fecha}</div>`;
+          const cont=it.html?sanitizeItem(it.html):esc(it.text||'');
+          return `<div class="card-item${it.done?' done':''}" data-item-id="${it.id}"><span class="ci-check" data-item-check>${it.done?'✓':'○'}</span><span class="ci-text">${cont}</span>${fecha}</div>`;
         }).join('');
-        return `<div class="card-items">${filas}</div>`;
+        return `<div class="card-items">${filas}<div class="card-item-add" data-item-add><span class="ci-check">＋</span><span>Agregar ítem</span></div></div>`;
       })():''}
     </div>
     <div class="task-side">
@@ -1985,7 +1997,7 @@ function taskRow(t){
   if(t.importante)el.classList.add('important');
   if(isExpanded(t))el.classList.add('subs-open');
 
-  const esZonaInteractiva=e=>e.target.closest('[data-move]')||e.target.closest('[data-done]')||e.target.closest('[data-dup]')||e.target.closest('[data-tagchip]')||e.target.closest('[data-stripe]')||e.target.closest('[data-subs]')||e.target.closest('[data-imp]')||e.target.classList.contains('tag-input');
+  const esZonaInteractiva=e=>e.target.closest('[data-move]')||e.target.closest('[data-done]')||e.target.closest('[data-dup]')||e.target.closest('[data-tagchip]')||e.target.closest('[data-stripe]')||e.target.closest('[data-subs]')||e.target.closest('[data-imp]')||e.target.closest('[data-item-check]')||e.target.closest('[data-item-add]')||e.target.classList.contains('tag-input');
   // Detección propia de click simple vs doble (la nativa se rompe porque
   // render() reemplaza los nodos y el segundo click cae en un elemento nuevo)
   el.addEventListener('click',e=>{
@@ -2087,6 +2099,40 @@ function taskRow(t){
 
   // Subtareas pendientes en la fila: tildar, editar y agregar sin abrir el detalle
   buildRowSubs(el.querySelector('[data-subs]'),t);
+
+  // Ítems tildables directo en la tarjeta (vista filtrada / enfoque)
+  el.querySelectorAll('.card-item').forEach(row=>{
+    const check=row.querySelector('[data-item-check]');
+    if(!check)return;
+    check.style.cursor='pointer';
+    check.addEventListener('click',async e=>{
+      e.stopPropagation();
+      const id=row.getAttribute('data-item-id');
+      const it=(t.items||[]).find(x=>x.id===id);
+      if(!it)return;
+      it.done=!it.done;
+      const pend=t.items.filter(i=>!i.done);
+      const done=t.items.filter(i=>i.done);
+      t.items=[...pend,...done];
+      await persist(t);
+      render();
+    });
+  });
+  // Agregar ítem desde la tarjeta
+  const addBtn=el.querySelector('[data-item-add]');
+  if(addBtn){
+    addBtn.addEventListener('click',async e=>{
+      e.stopPropagation();
+      const texto=prompt('Nuevo ítem:');
+      if(!texto||!texto.trim())return;
+      if(!t.items)t.items=[];
+      const idx=t.items.findIndex(i=>i.done);
+      const nuevo={id:uid(),text:texto.trim(),html:esc(texto.trim()),done:false,fecha:''};
+      if(idx===-1)t.items.push(nuevo); else t.items.splice(idx,0,nuevo);
+      await persist(t);
+      render();
+    });
+  }
 
   return el;
 }
@@ -2538,6 +2584,25 @@ function addCheckItem(refocus=true){
 }
 
 /* ============ Ítems (lista propia con fecha y orden manual) ============ */
+function sanitizeItem(html){
+  const doc=new DOMParser().parseFromString(html||'','text/html');
+  const ALLOW=new Set(['B','STRONG','I','EM','BR','DIV','P','SPAN']);
+  (function walk(node){
+    [...node.children].forEach(el=>{
+      walk(el);
+      if(!ALLOW.has(el.tagName)){el.replaceWith(...el.childNodes);return;}
+      [...el.attributes].forEach(a=>{
+        if(a.name.toLowerCase()==='style'){
+          const fw=el.style.fontWeight;el.removeAttribute('style');
+          if(fw==='bold'||parseInt(fw)>=600)el.style.fontWeight='bold';
+          return;
+        }
+        el.removeAttribute(a.name);
+      });
+    });
+  })(doc.body);
+  return doc.body.innerHTML;
+}
 function ordenarItems(){
   const pend=modalItems.filter(i=>!i.done);
   const done=modalItems.filter(i=>i.done);
@@ -2574,9 +2639,22 @@ function renderItems(){
       }
     });
     row.appendChild(cb);
-    const txt=document.createElement('input');
-    txt.className='item-text';txt.value=it.text||'';txt.readOnly=!editMode;txt.placeholder='Ítem…';
-    if(editMode)txt.addEventListener('input',()=>{it.text=txt.value;scheduleSave();});
+    const txt=document.createElement('div');
+    txt.className='item-text';
+    txt.contentEditable=editMode?'true':'false';
+    txt.innerHTML=sanitizeItem(it.html||esc(it.text||''));
+    txt.setAttribute('data-ph','Ítem… (Ctrl+B negrita · Enter salto de línea)');
+    if(editMode){
+      txt.addEventListener('input',()=>{it.html=sanitizeItem(txt.innerHTML);it.text=txt.textContent;scheduleSave();});
+      txt.addEventListener('keydown',e=>{
+        // Ctrl/Cmd+B = negrita
+        if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='b'){e.preventDefault();document.execCommand('bold');it.html=sanitizeItem(txt.innerHTML);it.text=txt.textContent;scheduleSave();}
+        // Enter = salto de línea dentro del mismo ítem (no crea ítem nuevo)
+        if(e.key==='Enter'){e.preventDefault();document.execCommand('insertLineBreak');it.html=sanitizeItem(txt.innerHTML);it.text=txt.textContent;scheduleSave();}
+      });
+      // pegar como texto plano
+      txt.addEventListener('paste',e=>{e.preventDefault();const t=e.clipboardData.getData('text/plain');document.execCommand('insertText',false,t);});
+    }
     row.appendChild(txt);
     const fecha=document.createElement('input');
     fecha.type='date';fecha.className='item-date';fecha.value=it.fecha||'';fecha.disabled=!editMode;
@@ -2608,7 +2686,7 @@ function addItem(refocus=true){
   const v=$('newItem').value.trim();
   if(!v)return;
   const idx=modalItems.findIndex(i=>i.done);
-  const nuevo={id:uid(),text:v,done:false,fecha:''};
+  const nuevo={id:uid(),text:v,html:esc(v),done:false,fecha:''};
   if(idx===-1)modalItems.push(nuevo); else modalItems.splice(idx,0,nuevo);
   $('newItem').value='';
   renderItems();scheduleSave(0);
